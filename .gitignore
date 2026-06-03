@@ -1,0 +1,30 @@
+# Sensitive configuration
+config.json
+.env
+
+# Generated files
+history.json
+translator.log
+*.log
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+
+# Dependencies
+venv/
+.venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+.trae/
+
+# OS
+.DS_Store
+Thumbs.db

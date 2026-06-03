@@ -1,0 +1,39 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --cream: #E8E2D9;
+  --cream-light: #F0EBE4;
+  --brown-dark: #3E2B1F;
+  --brown-primary: #5C3D2B;
+  --brown-secondary: #B8AFA6;
+  --brown-text: #2C1F14;
+  --brown-muted: #8C7B6E;
+  --brown-border: #D4CCC4;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--cream);
+  font-family: 'Lora', Georgia, serif;
+  color: var(--brown-text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+textarea {
+  font-family: 'Inter', system-ui, sans-serif;
+  resize: none;
+}
+
+input {
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+button {
+  font-family: 'Lora', Georgia, serif;
+}

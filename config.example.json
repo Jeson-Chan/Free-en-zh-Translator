@@ -1,0 +1,8 @@
+{
+  "api_key": "your-deepseek-api-key",
+  "api_url": "https://api.deepseek.com/chat/completions",
+  "model": "deepseek-chat",
+  "hotkey": "<ctrl>+t",
+  "timeout_seconds": 45,
+  "temperature": 0.2
+}
