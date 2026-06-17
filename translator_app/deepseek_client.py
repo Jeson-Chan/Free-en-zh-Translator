@@ -167,7 +167,9 @@ class DeepSeekClient:
             f"Target language: {target_language}\n"
             f"Translation style: {style_name}\n"
             f"Style instruction: {style_instruction}\n"
-            "Please preserve formatting, terminology, and paragraph structure.\n\n"
+            "IMPORTANT: When translating English to Chinese, do NOT translate English technical terms, "
+"proper nouns, acronyms, or specialized vocabulary. Keep them in their original English form.\n"
+"Preserve formatting and paragraph structure.\n\n"
             f"{text}"
         )
 

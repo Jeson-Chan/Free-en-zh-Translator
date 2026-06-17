@@ -16,8 +16,9 @@ AVAILABLE_TRANSLATION_STYLES: tuple[TranslationStyle, ...] = (
 
 _STYLE_INSTRUCTIONS: dict[TranslationStyle, str] = {
     "academic": (
-        "Use an academic tone. Preserve technical terminology, formal phrasing, "
-        "and the structure expected in research or professional writing."
+        "Use an academic tone. Keep English technical terms and specialized vocabulary "
+        "in their original form when translating to Chinese. Use formal phrasing and "
+        "the structure expected in research or professional writing."
     ),
     "casual": (
         "Use a natural and conversational tone. Keep the meaning accurate, but make "
