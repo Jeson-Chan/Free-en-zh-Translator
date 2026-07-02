@@ -20,3 +20,11 @@ class HistoryError(TranslatorAppError):
 class HotkeyError(TranslatorAppError):
     """Raised when the global hotkey listener cannot be started."""
 
+
+class QwenAPIError(TranslatorAppError):
+    """Raised when the Qwen VL API request fails."""
+
+
+class ImageProcessingError(TranslatorAppError):
+    """Raised when image preprocessing or validation fails."""
+
