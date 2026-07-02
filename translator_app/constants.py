@@ -12,6 +12,12 @@ DEFAULT_TEMPERATURE = 0.2
 DEFAULT_HOTKEY = "<ctrl>+t"
 MAX_HISTORY_ITEMS = 10
 
+# Qwen VL defaults
+DEFAULT_QWEN_API_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
+DEFAULT_QWEN_MODEL = "qwen-vl-max"
+DEFAULT_SCREENSHOT_HOTKEY = "<ctrl>+<shift>+s"
+DEFAULT_IMAGE_MAX_SIZE_MB = 20
+
 SYSTEM_PROMPT = (
     "你是一位专业的英汉互译专家。翻译时必须遵守以下规则：\n"
     "\n"
