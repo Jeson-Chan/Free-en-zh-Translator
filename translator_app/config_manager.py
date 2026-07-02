@@ -18,6 +18,11 @@ class ConfigManager:
       1. api_key field in config.json
       2. DEEPSEEK_API_KEY environment variable
       3. .env file in the project root (DEEPSEEK_API_KEY=...)
+
+    Qwen API key resolution priority (highest first):
+      1. qwen_api_key field in config.json
+      2. QWEN_API_KEY environment variable
+      3. .env file in the project root (QWEN_API_KEY=...)
     """
 
     def __init__(self, root_path: Path) -> None:
@@ -85,22 +90,38 @@ class ConfigManager:
         return result
 
     def _apply_env_fallback(self, config: AppConfig) -> AppConfig:
-        """Fill the API key from environment or .env file if missing."""
-        if config.api_key:
-            return config
+        """Fill API keys from environment or .env file if missing."""
+        # DeepSeek API key fallback (3-layer)
+        if not config.api_key:
+            env_key = os.environ.get("DEEPSEEK_API_KEY", "").strip()
+            if env_key:
+                config.api_key = env_key
+            else:
+                dotenv_path = self._root_path / ".env"
+                dotenv_vars = self._read_dotenv(dotenv_path)
+                dotenv_key = dotenv_vars.get("DEEPSEEK_API_KEY", "").strip()
+                if dotenv_key:
+                    config.api_key = dotenv_key
 
-        env_key = os.environ.get("DEEPSEEK_API_KEY", "").strip()
+        # Qwen API key fallback (3-layer) -- always evaluated
+        self._apply_qwen_env_fallback(config)
+        return config
+
+    def _apply_qwen_env_fallback(self, config: AppConfig) -> None:
+        """Fill the Qwen API key from environment or .env file if missing."""
+        if config.qwen_api_key:
+            return
+
+        env_key = os.environ.get("QWEN_API_KEY", "").strip()
         if env_key:
-            config.api_key = env_key
-            return config
+            config.qwen_api_key = env_key
+            return
 
         dotenv_path = self._root_path / ".env"
         dotenv_vars = self._read_dotenv(dotenv_path)
-        dotenv_key = dotenv_vars.get("DEEPSEEK_API_KEY", "").strip()
+        dotenv_key = dotenv_vars.get("QWEN_API_KEY", "").strip()
         if dotenv_key:
-            config.api_key = dotenv_key
-
-        return config
+            config.qwen_api_key = dotenv_key
 
     def save_config(self, config: AppConfig) -> None:
         """Persist app configuration to disk."""
