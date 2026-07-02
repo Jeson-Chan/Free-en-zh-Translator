@@ -35,6 +35,7 @@ class ScreenshotOverlay(QWidget):
         self._start_point: Optional[QPoint] = None
         self._end_point: Optional[QPoint] = None
         self._selecting = False
+        self._finished = False  # True once captured or cancelled has been emitted
 
         self.setWindowFlags(
             Qt.FramelessWindowHint
@@ -92,6 +93,7 @@ class ScreenshotOverlay(QWidget):
         if event.button() == Qt.LeftButton and self._selecting:
             self._selecting = False
             self._end_point = event.pos()
+            self._finished = True
 
             if self._start_point and self._end_point:
                 x, y, w, h = normalize_selection_rect(
@@ -121,19 +123,22 @@ class ScreenshotOverlay(QWidget):
                         self.cancelled.emit()
                 else:
                     self.cancelled.emit()
+            else:
+                self.cancelled.emit()
 
             self.close()
 
     def keyPressEvent(self, event) -> None:  # type: ignore[override]
         """Cancel on Escape key."""
-        if event.key() == Qt.Key_Escape:
+        if event.key() == Qt.Key_Escape and not self._finished:
+            self._finished = True
             self.cancelled.emit()
             self.close()
 
     def closeEvent(self, event) -> None:  # type: ignore[override]
         """Emit cancelled if overlay is closed externally (e.g., Alt+F4)."""
-        if not self._selecting:
-            # Only emit if not already emitting via mouse/key handlers
+        if not self._finished:
+            self._finished = True
             self.cancelled.emit()
         super().closeEvent(event)
 
