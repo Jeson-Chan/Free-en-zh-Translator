@@ -124,6 +124,15 @@ class SettingsDialog(QDialog):
         self._model_input = QLineEdit(config.model)
         self._hotkey_input = QLineEdit(config.hotkey)
 
+        # Store Qwen fields to preserve them in build_config (Task 14 adds UI)
+        self._qwen_config = {
+            "qwen_api_key": config.qwen_api_key,
+            "qwen_api_url": config.qwen_api_url,
+            "qwen_model": config.qwen_model,
+            "image_max_size_mb": config.image_max_size_mb,
+            "screenshot_hotkey": config.screenshot_hotkey,
+        }
+
         self._timeout_input = QSpinBox()
         self._timeout_input.setRange(5, 180)
         self._timeout_input.setValue(config.timeout_seconds)
@@ -243,6 +252,7 @@ class SettingsDialog(QDialog):
             hotkey=self._hotkey_input.text().strip(),
             timeout_seconds=self._timeout_input.value(),
             temperature=self._temperature_input.value(),
+            **self._qwen_config,  # Preserve Qwen fields (Task 14 adds UI)
         )
 
     def _validate_before_accept(self) -> None:

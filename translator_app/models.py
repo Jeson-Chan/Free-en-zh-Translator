@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any, Optional
 
 from translator_app.constants import (
@@ -31,8 +31,8 @@ class AppConfig:
     temperature: float = DEFAULT_TEMPERATURE
 
     qwen_api_key: str = ""
-    qwen_api_url: str = field(default_factory=lambda: DEFAULT_QWEN_API_URL)
-    qwen_model: str = field(default_factory=lambda: DEFAULT_QWEN_MODEL)
+    qwen_api_url: str = DEFAULT_QWEN_API_URL
+    qwen_model: str = DEFAULT_QWEN_MODEL
     image_max_size_mb: int = DEFAULT_IMAGE_MAX_SIZE_MB
     screenshot_hotkey: str = DEFAULT_SCREENSHOT_HOTKEY
 
@@ -46,11 +46,11 @@ class AppConfig:
             hotkey=str(payload.get("hotkey", DEFAULT_HOTKEY)).strip(),
             timeout_seconds=int(payload.get("timeout_seconds", DEFAULT_TIMEOUT_SECONDS)),
             temperature=float(payload.get("temperature", DEFAULT_TEMPERATURE)),
-            qwen_api_key=payload.get("qwen_api_key", ""),
-            qwen_api_url=payload.get("qwen_api_url", DEFAULT_QWEN_API_URL),
-            qwen_model=payload.get("qwen_model", DEFAULT_QWEN_MODEL),
-            image_max_size_mb=payload.get("image_max_size_mb", DEFAULT_IMAGE_MAX_SIZE_MB),
-            screenshot_hotkey=payload.get("screenshot_hotkey", DEFAULT_SCREENSHOT_HOTKEY),
+            qwen_api_key=str(payload.get("qwen_api_key", "")).strip(),
+            qwen_api_url=str(payload.get("qwen_api_url", DEFAULT_QWEN_API_URL)).strip(),
+            qwen_model=str(payload.get("qwen_model", DEFAULT_QWEN_MODEL)).strip(),
+            image_max_size_mb=int(payload.get("image_max_size_mb", DEFAULT_IMAGE_MAX_SIZE_MB)),
+            screenshot_hotkey=str(payload.get("screenshot_hotkey", DEFAULT_SCREENSHOT_HOTKEY)).strip(),
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -117,7 +117,7 @@ class TranslationResult:
     style: str
 
 
-@dataclass
+@dataclass(slots=True)
 class ImageTranslationResult:
     """Result of the two-stage image translation pipeline."""
 

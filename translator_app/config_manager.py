@@ -91,6 +91,9 @@ class ConfigManager:
 
     def _apply_env_fallback(self, config: AppConfig) -> AppConfig:
         """Fill API keys from environment or .env file if missing."""
+        # Read .env once if needed
+        dotenv_vars: dict[str, str] | None = None
+
         # DeepSeek API key fallback (3-layer)
         if not config.api_key:
             env_key = os.environ.get("DEEPSEEK_API_KEY", "").strip()
@@ -104,10 +107,12 @@ class ConfigManager:
                     config.api_key = dotenv_key
 
         # Qwen API key fallback (3-layer) -- always evaluated
-        self._apply_qwen_env_fallback(config)
+        self._apply_qwen_env_fallback(config, dotenv_vars)
         return config
 
-    def _apply_qwen_env_fallback(self, config: AppConfig) -> None:
+    def _apply_qwen_env_fallback(
+        self, config: AppConfig, dotenv_vars: dict[str, str] | None = None
+    ) -> None:
         """Fill the Qwen API key from environment or .env file if missing."""
         if config.qwen_api_key:
             return
@@ -117,8 +122,9 @@ class ConfigManager:
             config.qwen_api_key = env_key
             return
 
-        dotenv_path = self._root_path / ".env"
-        dotenv_vars = self._read_dotenv(dotenv_path)
+        if dotenv_vars is None:
+            dotenv_path = self._root_path / ".env"
+            dotenv_vars = self._read_dotenv(dotenv_path)
         dotenv_key = dotenv_vars.get("QWEN_API_KEY", "").strip()
         if dotenv_key:
             config.qwen_api_key = dotenv_key
