@@ -143,9 +143,11 @@ class SettingsDialog(QDialog):
         self._qwen_api_url_input = QLineEdit(config.qwen_api_url)
         self._qwen_model_input = QLineEdit(config.qwen_model)
 
+        self._screenshot_hotkey_input = QLineEdit(config.screenshot_hotkey)
+        self._screenshot_hotkey_input.setPlaceholderText("<ctrl>+<shift>+s")
+
         # Preserve fields not editable in this dialog
         self._image_max_size_mb = config.image_max_size_mb
-        self._screenshot_hotkey = config.screenshot_hotkey
 
         self._build_ui()
 
@@ -208,9 +210,10 @@ class SettingsDialog(QDialog):
         scroll_layout.addWidget(
             self._build_card(
                 "Experience",
-                "Tune response speed, generation temperature, and the global shortcut for showing the app.",
+                "Tune response speed, generation temperature, and the global shortcuts.",
                 (
                     ("Hotkey", self._hotkey_input),
+                    ("Screenshot", self._screenshot_hotkey_input),
                     ("Timeout (s)", self._timeout_input),
                     ("Temperature", self._temperature_input),
                 ),
@@ -304,7 +307,7 @@ class SettingsDialog(QDialog):
             qwen_api_url=self._qwen_api_url_input.text().strip(),
             qwen_model=self._qwen_model_input.text().strip(),
             image_max_size_mb=self._image_max_size_mb,
-            screenshot_hotkey=self._screenshot_hotkey,
+            screenshot_hotkey=self._screenshot_hotkey_input.text().strip(),
         )
 
     def _validate_before_accept(self) -> None:
