@@ -57,29 +57,7 @@ class DeepSeekClient:
             style,
         )
 
-        try:
-            response = requests.post(
-                self._config.api_url,
-                headers=headers,
-                json=payload,
-                timeout=self._config.timeout_seconds,
-            )
-            response.raise_for_status()
-            response_payload = response.json()
-        except requests.HTTPError as exc:
-            raise self._build_http_error(exc) from exc
-        except requests.RequestException as exc:
-            raise DeepSeekAPIError(
-                f"DeepSeek API request failed: {exc}"
-            ) from exc
-        except ValueError as exc:
-            raise DeepSeekAPIError("DeepSeek API returned invalid JSON.") from exc
-
-        content = self._extract_content(response_payload)
-        if not content:
-            raise DeepSeekAPIError("DeepSeek API returned an empty translation result.")
-
-        return content
+        return self._call_api(payload, headers)
 
     def translate_with_prompts(
         self,
@@ -108,6 +86,10 @@ class DeepSeekClient:
             model or self._config.model,
         )
 
+        return self._call_api(payload, headers)
+
+    def _call_api(self, payload: dict, headers: dict) -> str:
+        """Execute an API request and return the extracted content."""
         try:
             response = requests.post(
                 self._config.api_url,

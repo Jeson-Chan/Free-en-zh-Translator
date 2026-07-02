@@ -39,9 +39,36 @@ class ImageTranslationPipeline:
 
         If recognition fails, returns an error result with no translation.
         If translation fails, returns the recognition text with an error message.
+        Unexpected exceptions are caught and returned as structured error results.
         """
         timestamp = datetime.now().isoformat(timespec="seconds")
 
+        try:
+            return self._execute_stages(
+                image_base64, source_image_path, on_progress, timestamp
+            )
+        except Exception as exc:
+            LOGGER.exception("Unexpected pipeline error: %s", exc)
+            return ImageTranslationResult(
+                source_image_path=source_image_path,
+                recognized_text="",
+                translated_text="",
+                source_language="unknown",
+                target_language="unknown",
+                recognition_tokens=0,
+                translation_tokens=0,
+                timestamp=timestamp,
+                error=f"Pipeline error: {exc}",
+            )
+
+    def _execute_stages(
+        self,
+        image_base64: str,
+        source_image_path: str,
+        on_progress: Optional[ProgressCallback],
+        timestamp: str,
+    ) -> ImageTranslationResult:
+        """Execute the recognition and translation stages."""
         # Stage 1: Recognition
         if on_progress:
             on_progress("Recognizing image content...", 1, _TOTAL_STAGES)

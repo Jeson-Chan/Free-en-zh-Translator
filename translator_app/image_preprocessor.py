@@ -66,12 +66,14 @@ def preprocess_image(
 def preprocess_image_from_bytes(
     image_bytes: bytes,
     extension: str,
+    max_size_bytes: int = _MAX_FILE_SIZE_MB * 1024 * 1024,
 ) -> str:
     """Validate, resize, and encode image bytes as base64.
 
     Args:
         image_bytes: Raw image data.
         extension: File extension (e.g., ".png", ".jpg").
+        max_size_bytes: Maximum allowed byte size before decompression.
 
     Returns:
         Base64-encoded string of the processed image.
@@ -80,6 +82,13 @@ def preprocess_image_from_bytes(
         ImageProcessingError: If the image is invalid or cannot be processed.
     """
     suffix = extension.lower().lstrip(".")
+
+    # Check raw byte size to prevent decompression bombs
+    if len(image_bytes) > max_size_bytes:
+        raise ImageProcessingError(
+            f"Image data too large ({len(image_bytes)} bytes). "
+            f"Maximum allowed: {max_size_bytes} bytes."
+        )
 
     try:
         image = Image.open(io.BytesIO(image_bytes))
@@ -98,10 +107,9 @@ def preprocess_image_from_bytes(
         LOGGER.info("Resizing image from %dx%d to %dx%d", width, height, *new_size)
         image = image.resize(new_size, Image.Resampling.LANCZOS)
 
-    # Encode to base64
+    # Encode to base64 - always output PNG for consistent MIME type in Qwen VL API
     buffer = io.BytesIO()
-    output_format = "PNG" if suffix in ("png", "bmp") else "JPEG"
-    image.save(buffer, format=output_format, quality=95)
+    image.save(buffer, format="PNG")
     encoded = base64.b64encode(buffer.getvalue()).decode("ascii")
 
     LOGGER.info("Image preprocessed: %d bytes -> %d chars base64", len(image_bytes), len(encoded))
