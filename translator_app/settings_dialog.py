@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from PyQt5.QtCore import QEasingCurve, QPropertyAnimation
+from PyQt5.QtCore import QEasingCurve, QPropertyAnimation, Qt
 from PyQt5.QtWidgets import (
     QDialog,
     QDoubleSpinBox,
@@ -14,6 +14,7 @@ from PyQt5.QtWidgets import (
     QLineEdit,
     QMessageBox,
     QPushButton,
+    QScrollArea,
     QSpinBox,
     QVBoxLayout,
     QWidget,
@@ -33,8 +34,8 @@ class SettingsDialog(QDialog):
 
         self.setWindowTitle("Settings")
         self.setModal(True)
-        self.resize(560, 700)
-        self.setMinimumSize(500, 620)
+        self.resize(560, 780)
+        self.setMinimumSize(500, 520)
         self.setGraphicsEffect(self._fade_effect)
         self.setStyleSheet(
             """
@@ -149,10 +150,10 @@ class SettingsDialog(QDialog):
         self._build_ui()
 
     def _build_ui(self) -> None:
-        """Build the popup layout using card sections."""
+        """Build the popup layout using card sections inside a scroll area."""
         root_layout = QVBoxLayout()
         root_layout.setContentsMargins(24, 22, 24, 22)
-        root_layout.setSpacing(18)
+        root_layout.setSpacing(12)
 
         title_label = QLabel("settings")
         title_label.setObjectName("dialogTitle")
@@ -165,7 +166,20 @@ class SettingsDialog(QDialog):
 
         root_layout.addWidget(title_label)
         root_layout.addWidget(subtitle_label)
-        root_layout.addWidget(
+
+        # Scrollable card area
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.NoFrame)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        scroll.setStyleSheet("QScrollArea { background: transparent; border: none; }")
+
+        scroll_content = QWidget()
+        scroll_layout = QVBoxLayout()
+        scroll_layout.setContentsMargins(0, 4, 0, 4)
+        scroll_layout.setSpacing(14)
+
+        scroll_layout.addWidget(
             self._build_card(
                 "Connectivity",
                 "Keep your API endpoint and access key in sync with your DeepSeek account.",
@@ -176,7 +190,7 @@ class SettingsDialog(QDialog):
                 ),
             )
         )
-        root_layout.addWidget(
+        scroll_layout.addWidget(
             self._build_card(
                 "Experience",
                 "Tune response speed, generation temperature, and the global shortcut for showing the app.",
@@ -187,21 +201,27 @@ class SettingsDialog(QDialog):
                 ),
             )
         )
-        root_layout.addWidget(
+        scroll_layout.addWidget(
             self._build_card(
                 "Multimodal",
-                "Configure Qwen VL API for image translation (recognition + translation).",
+                "Configure Multimodal API for image translation (Qwen VL is recommended).",
                 (
-                    ("Qwen API Key", self._qwen_api_key_input),
-                    ("Qwen API URL", self._qwen_api_url_input),
-                    ("Qwen Model", self._qwen_model_input),
+                    ("Multimodal API Key", self._qwen_api_key_input),
+                    ("Multimodal API URL", self._qwen_api_url_input),
+                    ("Multimodal Model", self._qwen_model_input),
                 ),
             )
         )
+        scroll_layout.addStretch()
 
+        scroll_content.setLayout(scroll_layout)
+        scroll.setWidget(scroll_content)
+        root_layout.addWidget(scroll, stretch=1)
+
+        # Footer buttons
         footer = QWidget()
         footer_layout = QHBoxLayout()
-        footer_layout.setContentsMargins(0, 0, 0, 0)
+        footer_layout.setContentsMargins(0, 4, 0, 0)
         footer_layout.addStretch()
 
         cancel_button = QPushButton("Cancel")
@@ -216,7 +236,6 @@ class SettingsDialog(QDialog):
         footer_layout.addWidget(save_button)
         footer.setLayout(footer_layout)
 
-        root_layout.addStretch()
         root_layout.addWidget(footer)
         self.setLayout(root_layout)
 
@@ -231,8 +250,8 @@ class SettingsDialog(QDialog):
         card.setObjectName("settingsCard")
 
         layout = QVBoxLayout()
-        layout.setContentsMargins(20, 18, 20, 18)
-        layout.setSpacing(12)
+        layout.setContentsMargins(20, 14, 20, 14)
+        layout.setSpacing(8)
 
         title_label = QLabel(title)
         title_label.setObjectName("cardTitle")
@@ -242,9 +261,9 @@ class SettingsDialog(QDialog):
         hint_label.setWordWrap(True)
 
         form_layout = QFormLayout()
-        form_layout.setContentsMargins(0, 8, 0, 0)
-        form_layout.setSpacing(12)
-        form_layout.setHorizontalSpacing(16)
+        form_layout.setContentsMargins(0, 6, 0, 0)
+        form_layout.setSpacing(10)
+        form_layout.setHorizontalSpacing(14)
 
         for label_text, field in fields:
             label = QLabel(label_text)
