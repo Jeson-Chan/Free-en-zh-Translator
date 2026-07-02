@@ -81,6 +81,57 @@ class DeepSeekClient:
 
         return content
 
+    def translate_with_prompts(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        model: str | None = None,
+    ) -> str:
+        """Translate using custom system/user prompts and an optional model override.
+
+        Used by the image translation pipeline (Node 2) to send the recognized
+        Markdown to deepseek-v4-pro with a specialized translation prompt.
+        """
+        headers = self._build_headers()
+        payload = {
+            "model": model or self._config.model,
+            "temperature": self._config.temperature,
+            "stream": False,
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+        }
+
+        LOGGER.info(
+            "Sending custom-prompt translation with model=%s",
+            model or self._config.model,
+        )
+
+        try:
+            response = requests.post(
+                self._config.api_url,
+                headers=headers,
+                json=payload,
+                timeout=self._config.timeout_seconds,
+            )
+            response.raise_for_status()
+            response_payload = response.json()
+        except requests.HTTPError as exc:
+            raise self._build_http_error(exc) from exc
+        except requests.RequestException as exc:
+            raise DeepSeekAPIError(
+                f"DeepSeek API request failed: {exc}"
+            ) from exc
+        except ValueError as exc:
+            raise DeepSeekAPIError("DeepSeek API returned invalid JSON.") from exc
+
+        content = self._extract_content(response_payload)
+        if not content:
+            raise DeepSeekAPIError("DeepSeek API returned an empty translation result.")
+
+        return content
+
     def _build_headers(self) -> dict[str, str]:
         """Build validated request headers for the DeepSeek API."""
         api_key = self._validate_api_key(self._config.api_key)
