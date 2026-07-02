@@ -24,7 +24,7 @@
 | **requests** | `>=2.31, <3` | HTTP 客户端，向 DeepSeek/Qwen API 发送 POST 请求 |
 | **pynput** | `>=1.7.6, <2` | 全局热键监听（非 Qt 原生快捷键） |
 | **Pillow** | `>=10.0, <11` | 图片预处理（校验格式、缩放、base64 编码） |
-| **markdown** | `>=3.6` | Markdown 渲染为 HTML（图片翻译结果预览） |
+| **markdown** | `>=3.6, <4` | Markdown 渲染为 HTML（图片翻译结果预览） |
 
 ### 2.2 开发依赖
 
@@ -205,7 +205,7 @@ config.json 的 qwen_api_key 字段（非空）
   | `DEFAULT_QWEN_API_URL` | `"https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"` | Qwen VL API 端点 |
   | `DEFAULT_QWEN_MODEL` | `"qwen-vl-max"` | 默认图片识别模型 |
   | `DEFAULT_IMAGE_MAX_SIZE_MB` | `20` | 图片最大尺寸（MB） |
-  | `DEFAULT_SCREENSHOT_HOTKEY` | `""` | 截图快捷键（暂未实现） |
+  | `DEFAULT_SCREENSHOT_HOTKEY` | `"<ctrl>+<shift>+s"` | 截图快捷键 |
   | `RECOGNITION_SYSTEM_PROMPT` | 中文提示词 | 图片识别系统提示词（Node 1） |
   | `IMAGE_TRANSLATION_SYSTEM_PROMPT` | 中文提示词 | 图片翻译系统提示词（Node 2） |
 
@@ -616,7 +616,7 @@ Free-en-zh-Translator/
 ├── AGENT.md                   # AI 代理参考手册
 ├── docs/                      # 文档目录
 │   └── superpowers/plans/     # 实现计划
-├── translator_app/            # 主包（25 个模块）
+├── translator_app/            # 主包（24 个模块）
 │   ├── __init__.py
 │   ├── models.py              # 数据模型（AppConfig, HistoryEntry, TranslationResult, ImageTranslationResult）
 │   ├── constants.py           # 全局常量
