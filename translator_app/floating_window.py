@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from typing import Optional
 
 from PyQt5.QtCore import (
@@ -489,6 +490,12 @@ class FloatingTranslatorWindow(QWidget):
         self._status_label = QLabel()
         self._status_effect = QGraphicsOpacityEffect(self._status_label)
         self._status_animation = QPropertyAnimation(self._status_effect, b"opacity")
+        self._loading_timer = QTimer(self)
+        self._loading_timer.setInterval(100)
+        self._loading_timer.timeout.connect(self._update_loading_indicator)
+        self._translation_start_time: Optional[float] = None
+        self._loading_base_message: str = ""
+        self._loading_frame: int = 0
         self._result_card = QFrame()
         self._result_effect = QGraphicsOpacityEffect(self._result_card)
         self._result_animation = QPropertyAnimation(self._result_effect, b"opacity")
@@ -910,10 +917,12 @@ class FloatingTranslatorWindow(QWidget):
 
         self._image_translate_button.setEnabled(False)
         self._show_status("Translating image...", is_error=False)
+        self._start_loading("Translating image")
         self._markdown_output_widget.clear_content()
 
         pipeline = self._create_image_pipeline()
         if pipeline is None:
+            self._stop_loading()
             self._image_translate_button.setEnabled(True)
             return
 
@@ -922,6 +931,7 @@ class FloatingTranslatorWindow(QWidget):
             image_base64=image_base64,
             source_image_path="image",
         )
+        self._image_worker.progress.connect(self._on_image_translation_progress)
         self._image_worker.succeeded.connect(self._handle_image_translation_success)
         self._image_worker.failed.connect(self._handle_image_translation_failure)
         self._image_worker.finished.connect(self._finish_image_translation)
@@ -942,25 +952,27 @@ class FloatingTranslatorWindow(QWidget):
 
     def _handle_image_translation_success(self, result: ImageTranslationResult) -> None:
         """Display the image translation result."""
+        elapsed = self._stop_loading()
         if result.error and not result.translated_text:
-            self._show_status(f"Translation failed: {result.error}", is_error=True)
+            self._show_status(f"Translation failed: {result.error} ({elapsed:.1f}s)", is_error=True)
             output_text = (
                 f"Recognition result:\n\n{result.recognized_text}"
                 if result.recognized_text
                 else f"Error: {result.error}"
             )
         elif result.error:
-            self._show_status("Translation completed with errors.", is_error=True)
+            self._show_status(f"Translation completed with errors ({elapsed:.1f}s).", is_error=True)
             output_text = f"{result.translated_text}\n\n---\n\nError: {result.error}"
         else:
-            self._show_status("Image translation complete.", is_error=False)
+            self._show_status(f"Image translation complete ({elapsed:.1f}s).", is_error=False)
             output_text = result.translated_text
 
         self._markdown_output_widget.set_content(output_text)
 
     def _handle_image_translation_failure(self, error_message: str) -> None:
         """Show error message for image translation failure."""
-        self._show_status(error_message, is_error=True)
+        elapsed = self._stop_loading()
+        self._show_status(f"{error_message} ({elapsed:.1f}s)", is_error=True)
         self._markdown_output_widget.set_content(f"Error: {error_message}")
 
     def _finish_image_translation(self) -> None:
@@ -1106,6 +1118,7 @@ class FloatingTranslatorWindow(QWidget):
 
         self._translate_button.setEnabled(False)
         self._show_status("Translating...", is_error=False)
+        self._start_loading("Translating")
         self._worker = TranslationWorker(self._service, text, self._active_style)
         self._worker.succeeded.connect(self._handle_translation_success)
         self._worker.failed.connect(self._handle_translation_failure)
@@ -1114,6 +1127,7 @@ class FloatingTranslatorWindow(QWidget):
 
     def _handle_translation_success(self, result: TranslationResult) -> None:
         """Update the UI with a completed translation."""
+        elapsed = self._stop_loading()
         self._result_box.setPlainText(result.translated_text)
         self._copy_button.setEnabled(True)
         self._animate_result_card()
@@ -1121,13 +1135,14 @@ class FloatingTranslatorWindow(QWidget):
         target_label = describe_language(result.target_language)
         style_label = get_style_display_name(result.style)
         self._show_status(
-            f"{style_label} translation ready: {source_label} -> {target_label}. Tap the result to copy.",
+            f"{style_label} translation ready: {source_label} -> {target_label} ({elapsed:.1f}s). Tap the result to copy.",
             is_error=False,
         )
 
     def _handle_translation_failure(self, error_message: str) -> None:
         """Show a user-friendly message for translation failures."""
-        self._show_status(error_message, is_error=True)
+        elapsed = self._stop_loading()
+        self._show_status(f"{error_message} ({elapsed:.1f}s)", is_error=True)
 
     def _finish_translation(self) -> None:
         """Reset UI state after the worker finishes."""
@@ -1180,6 +1195,37 @@ class FloatingTranslatorWindow(QWidget):
 
         HistoryDialog(entries, self._history_manager, self).exec_()
         self._set_active_nav("translate")
+
+    def _start_loading(self, base_message: str) -> None:
+        """Start the animated loading dots and elapsed time counter."""
+        self._translation_start_time = time.perf_counter()
+        self._loading_base_message = base_message
+        self._loading_frame = 0
+        self._loading_timer.start()
+
+    def _stop_loading(self) -> float:
+        """Stop the loading animation timer and return elapsed seconds."""
+        if not self._loading_timer.isActive():
+            return 0.0
+        self._loading_timer.stop()
+        if self._translation_start_time is None:
+            return 0.0
+        return time.perf_counter() - self._translation_start_time
+
+    def _update_loading_indicator(self) -> None:
+        """Called every 100ms to update animated dots and elapsed time."""
+        if self._translation_start_time is None:
+            return
+        self._loading_frame += 1
+        elapsed = time.perf_counter() - self._translation_start_time
+        dots = "." * ((self._loading_frame // 5) % 4)
+        self._status_label.setText(f"{self._loading_base_message}{dots}  {elapsed:.1f}s")
+
+    def _on_image_translation_progress(
+        self, message: str, current: int, total: int
+    ) -> None:
+        """Update the loading base message when the image pipeline advances stages."""
+        self._loading_base_message = f"{message} ({current}/{total})"
 
     def _show_status(self, message: str, is_error: bool) -> None:
         """Show the latest status message using the themed status pill."""

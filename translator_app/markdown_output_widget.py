@@ -1,4 +1,4 @@
-"""Markdown output widget: source view, rendered preview, copy, and export."""
+"""Markdown output widget: source view, preview window, copy, and export."""
 
 from __future__ import annotations
 
@@ -18,13 +18,18 @@ from PyQt5.QtWidgets import (
     QWidget,
 )
 
+from translator_app.preview_window import (
+    MarkdownPreviewWindow,
+    _WEBENGINE_AVAILABLE,
+)
+
 LOGGER = logging.getLogger(__name__)
 
 _MONOSPACE_FONT_STACK = "Consolas, 'Source Code Pro', 'Courier New', monospace"
 
 
 class MarkdownOutputWidget(QFrame):
-    """Widget for displaying Markdown translation results with source/preview toggle."""
+    """Widget for displaying Markdown translation results with a preview window."""
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         """Build the markdown output UI."""
@@ -32,8 +37,7 @@ class MarkdownOutputWidget(QFrame):
         self.setObjectName("cardFrame")
 
         self._markdown_text: str = ""
-        self._is_preview_mode = False
-        self._markdown_available = True
+        self._preview_window: Optional[MarkdownPreviewWindow] = None
 
         self._build_ui()
 
@@ -55,8 +59,13 @@ class MarkdownOutputWidget(QFrame):
 
         self._preview_button = QPushButton("Preview")
         self._preview_button.setObjectName("secondaryButton")
-        self._preview_button.clicked.connect(self._on_preview_toggled)
+        self._preview_button.clicked.connect(self._on_preview_clicked)
         self._preview_button.setEnabled(False)
+        if not _WEBENGINE_AVAILABLE:
+            self._preview_button.setEnabled(False)
+            self._preview_button.setToolTip(
+                "Install PyQtWebEngine for Markdown preview"
+            )
 
         header_row.addWidget(section_label)
         header_row.addStretch()
@@ -87,11 +96,12 @@ class MarkdownOutputWidget(QFrame):
     def set_content(self, markdown_text: str) -> None:
         """Display the given Markdown in source mode."""
         self._markdown_text = markdown_text
-        self._is_preview_mode = False
         self._text_edit.setPlainText(markdown_text)
         self._copy_button.setEnabled(bool(markdown_text))
         self._preview_button.setEnabled(bool(markdown_text))
-        self._preview_button.setText("Preview")
+        # Live update preview window if open
+        if self._preview_window is not None and self._preview_window.isVisible():
+            self._preview_window.set_content(markdown_text)
 
     def get_content(self) -> str:
         """Return the current Markdown source text."""
@@ -100,77 +110,41 @@ class MarkdownOutputWidget(QFrame):
     def clear_content(self) -> None:
         """Reset the widget to empty state."""
         self._markdown_text = ""
-        self._is_preview_mode = False
         self._text_edit.clear()
         self._copy_button.setEnabled(False)
         self._preview_button.setEnabled(False)
-        self._preview_button.setText("Preview")
+        # Hide preview window if open
+        if self._preview_window is not None:
+            self._preview_window.hide()
 
     def _on_copy_clicked(self) -> None:
         """Copy the Markdown source to the clipboard."""
         if self._markdown_text:
             QApplication.clipboard().setText(self._markdown_text)
 
-    def _on_preview_toggled(self) -> None:
-        """Toggle between source view and rendered HTML preview."""
-        if self._is_preview_mode:
-            self._show_source()
-        else:
-            self._show_preview()
-
-    def _show_source(self) -> None:
-        """Switch to plain Markdown source view."""
-        self._is_preview_mode = False
-        self._text_edit.setPlainText(self._markdown_text)
-        self._preview_button.setText("Preview")
-        self._text_edit.setFont(self._create_monospace_font())
-
-    def _show_preview(self) -> None:
-        """Render Markdown as HTML and display in the text edit."""
-        if not self._markdown_available:
+    def _on_preview_clicked(self) -> None:
+        """Open the Markdown preview window."""
+        if not self._markdown_text:
             return
+        if not _WEBENGINE_AVAILABLE:
+            self._show_webengine_warning()
+            return
+        if self._preview_window is None:
+            self._preview_window = MarkdownPreviewWindow(self.window())
+        self._preview_window.set_content(self._markdown_text)
+        self._preview_window.show()
+        self._preview_window.raise_()
+        self._preview_window.activateWindow()
 
-        try:
-            import markdown as md
+    @staticmethod
+    def _show_webengine_warning() -> None:
+        """Show a message box explaining the PyQtWebEngine dependency."""
+        from PyQt5.QtWidgets import QMessageBox
 
-            html = md.markdown(
-                self._markdown_text,
-                extensions=["tables", "fenced_code"],
-            )
-
-            styled_html = (
-                '<style>'
-                'body { font-family: "Times New Roman", "SimSun", serif; '
-                'font-size: 15px; color: #2C1F14; line-height: 1.65; }'
-                'h1, h2, h3 { font-family: Georgia, serif; color: #3E2B1F; }'
-                'code { background-color: #F0EBE4; padding: 2px 6px; border-radius: 4px; '
-                'font-family: Consolas, monospace; font-size: 13px; }'
-                'pre { background-color: #F0EBE4; padding: 12px; border-radius: 8px; '
-                'overflow-x: auto; }'
-                'table { border-collapse: collapse; width: 100%; }'
-                'th, td { border: 1px solid #D4CCC4; padding: 8px 12px; text-align: left; }'
-                'th { background-color: #F0EBE4; }'
-                'blockquote { border-left: 3px solid #D4CCC4; margin-left: 0; '
-                'padding-left: 16px; color: #5C4033; }'
-                '</style>'
-                f'{html}'
-            )
-
-            self._is_preview_mode = True
-            self._text_edit.setHtml(styled_html)
-            self._preview_button.setText("Source")
-        except ImportError:
-            LOGGER.warning("markdown library not installed; preview unavailable")
-            self._markdown_available = False
-            self._preview_button.setEnabled(False)
-            self._preview_button.setText("Preview (unavailable)")
-            self._text_edit.setPlainText(
-                "Preview requires the 'markdown' library.\n"
-                "Install it: pip install markdown>=3.6"
-            )
-        except Exception as exc:
-            LOGGER.error("Markdown rendering failed: %s", exc)
-            self._text_edit.setPlainText(
-                f"Preview rendering failed: {exc}\n\n"
-                f"--- Source ---\n\n{self._markdown_text}"
-            )
+        QMessageBox.information(
+            None,
+            "Preview Unavailable",
+            "The Markdown preview requires PyQtWebEngine.\n\n"
+            "Install it with:\n"
+            "  pip install PyQtWebEngine>=5.15,<6",
+        )
