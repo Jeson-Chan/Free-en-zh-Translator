@@ -172,7 +172,22 @@ class SettingsDialog(QDialog):
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QFrame.NoFrame)
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        scroll.setStyleSheet("QScrollArea { background: transparent; border: none; }")
+        scroll.setStyleSheet(
+            "QScrollArea { background: #E8E2D9; border: none; }"
+            "QScrollArea > QWidget > QWidget { background: #E8E2D9; }"
+            "QScrollBar:vertical {"
+            "  background: #E8E2D9; width: 8px; margin: 0;"
+            "}"
+            "QScrollBar::handle:vertical {"
+            "  background: #D4CCC4; border-radius: 4px; min-height: 30px;"
+            "}"
+            "QScrollBar::handle:vertical:hover {"
+            "  background: #C8BFB7;"
+            "}"
+            "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {"
+            "  height: 0;"
+            "}"
+        )
 
         scroll_content = QWidget()
         scroll_layout = QVBoxLayout()
