@@ -696,6 +696,7 @@ class FloatingTranslatorWindow(QWidget):
         # Image mode widgets
         self._image_input_widget = ImageInputWidget()
         self._image_input_widget.image_loaded.connect(self._on_image_loaded)
+        self._image_input_widget.image_cleared.connect(self._on_image_cleared)
 
         self._image_translate_button = QPushButton("Translate Image")
         self._image_translate_button.setObjectName("primaryButton")
@@ -890,6 +891,11 @@ class FloatingTranslatorWindow(QWidget):
         """Enable the translate button when an image is loaded."""
         if self._image_worker is None or not self._image_worker.isRunning():
             self._image_translate_button.setEnabled(True)
+
+    def _on_image_cleared(self) -> None:
+        """Clear the markdown output and disable translate when image is cleared."""
+        self._markdown_output_widget.clear_content()
+        self._image_translate_button.setEnabled(False)
 
     def _start_image_translation(self) -> None:
         """Start the image translation pipeline."""

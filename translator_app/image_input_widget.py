@@ -34,6 +34,7 @@ class ImageInputWidget(QFrame):
     """Widget for loading images via file upload, screenshot, or drag-and-drop."""
 
     image_loaded = pyqtSignal(str)
+    image_cleared = pyqtSignal()
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         """Build the image input UI."""
@@ -66,10 +67,16 @@ class ImageInputWidget(QFrame):
         self._capture_button.setObjectName("secondaryButton")
         self._capture_button.clicked.connect(self._on_capture_clicked)
 
+        self._clear_button = QPushButton("Clear")
+        self._clear_button.setObjectName("secondaryButton")
+        self._clear_button.clicked.connect(self._on_clear_clicked)
+        self._clear_button.setEnabled(False)
+
         header_row.addWidget(section_label)
         header_row.addStretch()
         header_row.addWidget(self._upload_button)
         header_row.addWidget(self._capture_button)
+        header_row.addWidget(self._clear_button)
 
         # Preview area
         self._preview_label = QLabel()
@@ -127,12 +134,18 @@ class ImageInputWidget(QFrame):
 
         self._load_from_bytes(png_data, ".png", source="screenshot")
 
+    def _on_clear_clicked(self) -> None:
+        """Clear the loaded image and notify the parent."""
+        self.clear_image()
+        self.image_cleared.emit()
+
     def _load_from_file(self, file_path: str) -> None:
         """Load and preprocess an image from a file path."""
         try:
             self._image_base64 = preprocess_image(file_path)
             self._image_path = file_path
             self._update_preview_from_file(file_path)
+            self._clear_button.setEnabled(True)
             self.image_loaded.emit(self._image_base64)
         except Exception as exc:
             LOGGER.error("Failed to load image: %s", exc)
@@ -146,6 +159,7 @@ class ImageInputWidget(QFrame):
             self._image_base64 = preprocess_image_from_bytes(data, extension)
             self._image_path = source
             self._update_preview_from_bytes(data)
+            self._clear_button.setEnabled(True)
             self.image_loaded.emit(self._image_base64)
         except Exception as exc:
             LOGGER.error("Failed to load image from bytes: %s", exc)
@@ -192,6 +206,7 @@ class ImageInputWidget(QFrame):
             "border-radius: 16px; padding: 20px; }"
         )
         self._file_info_label.setText("")
+        self._clear_button.setEnabled(False)
 
     # Drag-and-drop support
 
