@@ -57,9 +57,22 @@ class QwenClient:
         }
 
         LOGGER.info("Sending image recognition request with model=%s", self._config.qwen_model)
-        return self._send_request(payload, api_key)
+        url = self._build_url(self._config.qwen_api_url)
+        return self._send_request(url, payload, api_key)
 
-    def _send_request(self, payload: dict[str, Any], api_key: str) -> str:
+    @staticmethod
+    def _build_url(raw_url: str) -> str:
+        """Ensure the API URL ends with /chat/completions.
+
+        Accepts both base URLs (e.g. .../compatible-mode/v1) and full
+        endpoint URLs (e.g. .../compatible-mode/v1/chat/completions).
+        """
+        url = raw_url.strip().rstrip("/")
+        if not url.endswith("/chat/completions"):
+            url = f"{url}/chat/completions"
+        return url
+
+    def _send_request(self, url: str, payload: dict[str, Any], api_key: str) -> str:
         """Execute an HTTP POST and extract the response content."""
         headers = {
             "Authorization": f"Bearer {api_key}",
@@ -70,7 +83,7 @@ class QwenClient:
 
         try:
             response = requests.post(
-                self._config.qwen_api_url,
+                url,
                 headers=headers,
                 json=payload,
                 timeout=self._config.timeout_seconds,
