@@ -47,11 +47,26 @@ from PyQt5.QtWidgets import (
 )
 
 from translator_app.config_manager import ConfigManager
-from translator_app.exceptions import ConfigurationError, HistoryError, HotkeyError
+from translator_app.deepseek_client import DeepSeekClient
+from translator_app.exceptions import (
+    ConfigurationError,
+    DeepSeekAPIError,
+    HistoryError,
+    HotkeyError,
+    ImageProcessingError,
+    QwenAPIError,
+)
 from translator_app.history_manager import HistoryManager
 from translator_app.hotkey_manager import GlobalHotkeyManager
+from translator_app.image_input_widget import ImageInputWidget
+from translator_app.image_pipeline import ImageTranslationPipeline
+from translator_app.image_recognition_service import ImageRecognitionService
+from translator_app.image_translation_service import ImageTranslationService
+from translator_app.image_worker import ImageTranslationWorker
 from translator_app.language import describe_language
-from translator_app.models import AppConfig, HistoryEntry, TranslationResult
+from translator_app.markdown_output_widget import MarkdownOutputWidget
+from translator_app.models import AppConfig, HistoryEntry, ImageTranslationResult, TranslationResult
+from translator_app.qwen_client import QwenClient
 from translator_app.settings_dialog import SettingsDialog
 from translator_app.translation_service import TranslationService
 from translator_app.translation_style import (
@@ -134,6 +149,13 @@ def create_line_icon(name: str, color: str) -> QIcon:
         path.lineTo(7, 11)
         path.closeSubpath()
         painter.drawPath(path)
+    elif name == "image":
+        painter.drawRect(5, 7, 14, 11)
+        painter.drawLine(5, 14, 9, 11)
+        painter.drawLine(9, 11, 12, 13)
+        painter.drawLine(12, 13, 15, 10)
+        painter.drawLine(15, 10, 19, 14)
+        painter.drawEllipse(14, 8, 3, 3)
     else:
         painter.drawEllipse(7, 7, 10, 10)
 
@@ -455,6 +477,10 @@ class FloatingTranslatorWindow(QWidget):
         self._active_style = DEFAULT_TRANSLATION_STYLE
         self._mode_buttons: dict[str, QPushButton] = {}
         self._nav_buttons: dict[str, QToolButton] = {}
+        self._image_worker: Optional[ImageTranslationWorker] = None
+        self._current_mode: str = "text"
+        self._image_input_widget: Optional[ImageInputWidget] = None
+        self._markdown_output_widget: Optional[MarkdownOutputWidget] = None
 
         self._input_box = QTextEdit()
         self._result_box = ClickToCopyTextEdit()
@@ -647,8 +673,9 @@ class FloatingTranslatorWindow(QWidget):
         header_layout.addLayout(mode_layout)
         header.setLayout(header_layout)
 
-        input_card = self._build_input_card()
+        self._input_card = self._build_input_card()
 
+        self._swap_row_widget = QWidget()
         swap_row = QHBoxLayout()
         swap_row.setContentsMargins(0, 0, 0, 0)
         swap_row.addStretch()
@@ -659,11 +686,23 @@ class FloatingTranslatorWindow(QWidget):
         swap_button.clicked.connect(self._swap_translation_direction)
         swap_row.addWidget(swap_button)
         swap_row.addStretch()
+        self._swap_row_widget.setLayout(swap_row)
 
         self._translate_button.setObjectName("primaryButton")
         self._translate_button.clicked.connect(self._start_translation)
 
-        result_card = self._build_result_card()
+        self._result_card = self._build_result_card()
+
+        # Image mode widgets
+        self._image_input_widget = ImageInputWidget()
+        self._image_input_widget.image_loaded.connect(self._on_image_loaded)
+
+        self._image_translate_button = QPushButton("Translate Image")
+        self._image_translate_button.setObjectName("primaryButton")
+        self._image_translate_button.clicked.connect(self._start_image_translation)
+        self._image_translate_button.setEnabled(False)
+
+        self._markdown_output_widget = MarkdownOutputWidget()
 
         self._status_label.setObjectName("statusToast")
         self._status_label.setAlignment(Qt.AlignCenter)
@@ -680,13 +719,18 @@ class FloatingTranslatorWindow(QWidget):
         footer_row.addWidget(size_grip, alignment=Qt.AlignRight | Qt.AlignBottom)
 
         root_layout.addWidget(header)
-        root_layout.addWidget(input_card, stretch=1)
-        root_layout.addLayout(swap_row)
+        root_layout.addWidget(self._input_card, stretch=1)
+        root_layout.addWidget(self._swap_row_widget)
         root_layout.addWidget(self._translate_button)
-        root_layout.addWidget(result_card, stretch=1)
+        root_layout.addWidget(self._result_card, stretch=1)
+        root_layout.addWidget(self._image_input_widget, stretch=1)
+        root_layout.addWidget(self._image_translate_button)
+        root_layout.addWidget(self._markdown_output_widget, stretch=1)
         root_layout.addWidget(self._status_label)
         root_layout.addLayout(footer_row)
         self.setLayout(root_layout)
+
+        self._set_mode("text")
 
     def _build_input_card(self) -> QFrame:
         """Build the styled input card."""
@@ -770,7 +814,8 @@ class FloatingTranslatorWindow(QWidget):
         layout.setSpacing(8)
 
         button_specs = (
-            ("translate", "Translate", "home", None),
+            ("translate", "Translate", "home", self._on_nav_translate_clicked),
+            ("image", "Image", "image", self._on_nav_image_clicked),
             ("history", "History", "history", self._show_history),
             ("settings", "Settings", "settings", self._show_settings),
         )
@@ -801,6 +846,111 @@ class FloatingTranslatorWindow(QWidget):
             button.setIcon(create_line_icon(self._nav_icon_names[nav_key], icon_color))
             button.style().unpolish(button)
             button.style().polish(button)
+
+    def _set_mode(self, mode: str) -> None:
+        """Switch between text translation and image translation modes."""
+        self._current_mode = mode
+
+        text_widgets = [
+            self._input_card,
+            self._swap_row_widget,
+            self._translate_button,
+            self._result_card,
+        ]
+        image_widgets = [
+            self._image_input_widget,
+            self._image_translate_button,
+            self._markdown_output_widget,
+        ]
+
+        if mode == "text":
+            for w in text_widgets:
+                w.show()
+            for w in image_widgets:
+                if w is not None:
+                    w.hide()
+        else:
+            for w in text_widgets:
+                w.hide()
+            for w in image_widgets:
+                if w is not None:
+                    w.show()
+
+    def _on_nav_translate_clicked(self) -> None:
+        """Switch to text translation mode."""
+        self._set_mode("text")
+        self._set_active_nav("translate")
+
+    def _on_nav_image_clicked(self) -> None:
+        """Switch to image translation mode."""
+        self._set_mode("image")
+        self._set_active_nav("image")
+
+    def _on_image_loaded(self, image_base64: str) -> None:
+        """Enable the translate button when an image is loaded."""
+        self._image_translate_button.setEnabled(True)
+
+    def _start_image_translation(self) -> None:
+        """Start the image translation pipeline."""
+        image_base64 = self._image_input_widget.get_image_base64()
+        if not image_base64:
+            self._show_status("Please load an image first.", is_error=True)
+            return
+
+        if self._image_worker is not None and self._image_worker.isRunning():
+            self._show_status("Please wait for the current translation to finish.", is_error=True)
+            return
+
+        self._image_translate_button.setEnabled(False)
+        self._show_status("Translating image...", is_error=False)
+        self._markdown_output_widget.clear_content()
+
+        pipeline = self._create_image_pipeline()
+        self._image_worker = ImageTranslationWorker(
+            pipeline=pipeline,
+            image_base64=image_base64,
+            source_image_path="image",
+        )
+        self._image_worker.succeeded.connect(self._handle_image_translation_success)
+        self._image_worker.failed.connect(self._handle_image_translation_failure)
+        self._image_worker.finished.connect(self._finish_image_translation)
+        self._image_worker.start()
+
+    def _create_image_pipeline(self) -> ImageTranslationPipeline:
+        """Create the image translation pipeline with Qwen and DeepSeek clients."""
+        config = self._config_manager.load_config()
+        qwen_client = QwenClient(config)
+        deepseek_client = DeepSeekClient(config)
+        recognition_service = ImageRecognitionService(qwen_client)
+        translation_service = ImageTranslationService(deepseek_client)
+        return ImageTranslationPipeline(recognition_service, translation_service)
+
+    def _handle_image_translation_success(self, result: ImageTranslationResult) -> None:
+        """Display the image translation result."""
+        if result.error and not result.translated_text:
+            self._show_status(f"Translation failed: {result.error}", is_error=True)
+            output_text = (
+                f"Recognition result:\n\n{result.recognized_text}"
+                if result.recognized_text
+                else f"Error: {result.error}"
+            )
+        elif result.error:
+            self._show_status("Translation completed with errors.", is_error=True)
+            output_text = f"{result.translated_text}\n\n---\n\nError: {result.error}"
+        else:
+            self._show_status("Image translation complete.", is_error=False)
+            output_text = result.translated_text
+
+        self._markdown_output_widget.set_content(output_text)
+
+    def _handle_image_translation_failure(self, error_message: str) -> None:
+        """Show error message for image translation failure."""
+        self._show_status(error_message, is_error=True)
+        self._markdown_output_widget.set_content(f"Error: {error_message}")
+
+    def _finish_image_translation(self) -> None:
+        """Reset UI state after image translation finishes."""
+        self._image_translate_button.setEnabled(True)
 
     def _create_tray_icon(self) -> None:
         """Create the system tray icon and its actions."""

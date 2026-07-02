@@ -124,15 +124,6 @@ class SettingsDialog(QDialog):
         self._model_input = QLineEdit(config.model)
         self._hotkey_input = QLineEdit(config.hotkey)
 
-        # Store Qwen fields to preserve them in build_config (Task 14 adds UI)
-        self._qwen_config = {
-            "qwen_api_key": config.qwen_api_key,
-            "qwen_api_url": config.qwen_api_url,
-            "qwen_model": config.qwen_model,
-            "image_max_size_mb": config.image_max_size_mb,
-            "screenshot_hotkey": config.screenshot_hotkey,
-        }
-
         self._timeout_input = QSpinBox()
         self._timeout_input.setRange(5, 180)
         self._timeout_input.setValue(config.timeout_seconds)
@@ -142,6 +133,14 @@ class SettingsDialog(QDialog):
         self._temperature_input.setDecimals(2)
         self._temperature_input.setSingleStep(0.1)
         self._temperature_input.setValue(config.temperature)
+
+        # Qwen VL (Multimodal) inputs
+        self._qwen_api_key_input = QLineEdit(config.qwen_api_key)
+        self._qwen_api_key_input.setEchoMode(QLineEdit.Password)
+        self._qwen_api_key_input.setPlaceholderText("Paste your Qwen/DashScope API key")
+
+        self._qwen_api_url_input = QLineEdit(config.qwen_api_url)
+        self._qwen_model_input = QLineEdit(config.qwen_model)
 
         self._build_ui()
 
@@ -181,6 +180,17 @@ class SettingsDialog(QDialog):
                     ("Hotkey", self._hotkey_input),
                     ("Timeout (s)", self._timeout_input),
                     ("Temperature", self._temperature_input),
+                ),
+            )
+        )
+        root_layout.addWidget(
+            self._build_card(
+                "Multimodal",
+                "Configure Qwen VL API for image translation (recognition + translation).",
+                (
+                    ("Qwen API Key", self._qwen_api_key_input),
+                    ("Qwen API URL", self._qwen_api_url_input),
+                    ("Qwen Model", self._qwen_model_input),
                 ),
             )
         )
@@ -252,7 +262,9 @@ class SettingsDialog(QDialog):
             hotkey=self._hotkey_input.text().strip(),
             timeout_seconds=self._timeout_input.value(),
             temperature=self._temperature_input.value(),
-            **self._qwen_config,  # Preserve Qwen fields (Task 14 adds UI)
+            qwen_api_key=self._qwen_api_key_input.text().strip(),
+            qwen_api_url=self._qwen_api_url_input.text().strip(),
+            qwen_model=self._qwen_model_input.text().strip(),
         )
 
     def _validate_before_accept(self) -> None:
