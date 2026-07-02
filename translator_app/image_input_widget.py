@@ -7,7 +7,7 @@ import os
 from pathlib import Path
 from typing import Optional
 
-from PyQt5.QtCore import QMimeData, QSize, Qt, pyqtSignal
+from PyQt5.QtCore import QSize, Qt, pyqtSignal
 from PyQt5.QtGui import QDragEnterEvent, QDropEvent, QPixmap
 from PyQt5.QtWidgets import (
     QApplication,
@@ -108,6 +108,8 @@ class ImageInputWidget(QFrame):
     def _on_capture_clicked(self) -> None:
         """Minimize main window, take screenshot, then restore."""
         main_window = self.window()
+        if main_window is None:
+            return
         was_visible = main_window.isVisible()
         if was_visible:
             main_window.hide()
@@ -136,6 +138,7 @@ class ImageInputWidget(QFrame):
             LOGGER.error("Failed to load image: %s", exc)
             self._preview_label.setText(f"Error: {exc}")
             self._image_base64 = None
+            self._image_path = ""
 
     def _load_from_bytes(self, data: bytes, extension: str, source: str = "") -> None:
         """Load and preprocess an image from raw bytes."""
@@ -148,6 +151,7 @@ class ImageInputWidget(QFrame):
             LOGGER.error("Failed to load image from bytes: %s", exc)
             self._preview_label.setText(f"Error: {exc}")
             self._image_base64 = None
+            self._image_path = ""
 
     def _update_preview_from_file(self, file_path: str) -> None:
         """Show a thumbnail preview of the loaded file."""

@@ -142,6 +142,10 @@ class SettingsDialog(QDialog):
         self._qwen_api_url_input = QLineEdit(config.qwen_api_url)
         self._qwen_model_input = QLineEdit(config.qwen_model)
 
+        # Preserve fields not editable in this dialog
+        self._image_max_size_mb = config.image_max_size_mb
+        self._screenshot_hotkey = config.screenshot_hotkey
+
         self._build_ui()
 
     def _build_ui(self) -> None:
@@ -265,6 +269,8 @@ class SettingsDialog(QDialog):
             qwen_api_key=self._qwen_api_key_input.text().strip(),
             qwen_api_url=self._qwen_api_url_input.text().strip(),
             qwen_model=self._qwen_model_input.text().strip(),
+            image_max_size_mb=self._image_max_size_mb,
+            screenshot_hotkey=self._screenshot_hotkey,
         )
 
     def _validate_before_accept(self) -> None:

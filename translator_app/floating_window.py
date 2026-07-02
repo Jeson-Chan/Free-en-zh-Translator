@@ -888,7 +888,8 @@ class FloatingTranslatorWindow(QWidget):
 
     def _on_image_loaded(self, image_base64: str) -> None:
         """Enable the translate button when an image is loaded."""
-        self._image_translate_button.setEnabled(True)
+        if self._image_worker is None or not self._image_worker.isRunning():
+            self._image_translate_button.setEnabled(True)
 
     def _start_image_translation(self) -> None:
         """Start the image translation pipeline."""
@@ -906,6 +907,10 @@ class FloatingTranslatorWindow(QWidget):
         self._markdown_output_widget.clear_content()
 
         pipeline = self._create_image_pipeline()
+        if pipeline is None:
+            self._image_translate_button.setEnabled(True)
+            return
+
         self._image_worker = ImageTranslationWorker(
             pipeline=pipeline,
             image_base64=image_base64,
@@ -916,14 +921,18 @@ class FloatingTranslatorWindow(QWidget):
         self._image_worker.finished.connect(self._finish_image_translation)
         self._image_worker.start()
 
-    def _create_image_pipeline(self) -> ImageTranslationPipeline:
+    def _create_image_pipeline(self) -> Optional[ImageTranslationPipeline]:
         """Create the image translation pipeline with Qwen and DeepSeek clients."""
-        config = self._config_manager.load_config()
-        qwen_client = QwenClient(config)
-        deepseek_client = DeepSeekClient(config)
-        recognition_service = ImageRecognitionService(qwen_client)
-        translation_service = ImageTranslationService(deepseek_client)
-        return ImageTranslationPipeline(recognition_service, translation_service)
+        try:
+            config = self._config_manager.load_config()
+            qwen_client = QwenClient(config)
+            deepseek_client = DeepSeekClient(config)
+            recognition_service = ImageRecognitionService(qwen_client)
+            translation_service = ImageTranslationService(deepseek_client)
+            return ImageTranslationPipeline(recognition_service, translation_service)
+        except (ConfigurationError, ValueError) as exc:
+            self._show_status(f"Failed to initialize pipeline: {exc}", is_error=True)
+            return None
 
     def _handle_image_translation_success(self, result: ImageTranslationResult) -> None:
         """Display the image translation result."""

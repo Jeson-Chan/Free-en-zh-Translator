@@ -41,7 +41,7 @@ class ScreenshotOverlay(QWidget):
             | Qt.WindowStaysOnTopHint
             | Qt.Tool
         )
-        self.setAttribute(Qt.WA_TranslucentBackground, False)
+        self.setAttribute(Qt.WA_TranslucentBackground, True)
         self.setCursor(QCursor(Qt.CrossCursor))
 
         screen = QApplication.primaryScreen()
@@ -119,6 +119,8 @@ class ScreenshotOverlay(QWidget):
                         self.captured.emit(png_data)
                     else:
                         self.cancelled.emit()
+                else:
+                    self.cancelled.emit()
 
             self.close()
 
@@ -127,6 +129,13 @@ class ScreenshotOverlay(QWidget):
         if event.key() == Qt.Key_Escape:
             self.cancelled.emit()
             self.close()
+
+    def closeEvent(self, event) -> None:  # type: ignore[override]
+        """Emit cancelled if overlay is closed externally (e.g., Alt+F4)."""
+        if not self._selecting:
+            # Only emit if not already emitting via mouse/key handlers
+            self.cancelled.emit()
+        super().closeEvent(event)
 
     @staticmethod
     def _pixmap_to_png_bytes(pixmap: QPixmap) -> Optional[bytes]:
@@ -167,6 +176,13 @@ class ScreenshotTool:
         if app:
             while not self._completed:
                 app.processEvents()
+
+        # Cleanup overlay to prevent memory leak
+        if self._overlay is not None:
+            self._overlay.captured.disconnect(self._on_captured)
+            self._overlay.cancelled.disconnect(self._on_cancelled)
+            self._overlay.deleteLater()
+            self._overlay = None
 
         return self._result
 

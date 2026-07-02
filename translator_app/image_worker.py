@@ -43,12 +43,12 @@ class ImageTranslationWorker(QThread):
         except (ConfigurationError, QwenAPIError, ImageProcessingError, ValueError) as exc:
             self.failed.emit(str(exc))
             return
+        except Exception as exc:
+            self.failed.emit(f"Unexpected error: {exc}")
+            return
 
-        if result.error:
-            # Partial failure: recognition succeeded but translation failed
-            self.succeeded.emit(result)
-        else:
-            self.succeeded.emit(result)
+        # Note: handler checks result.error to handle partial failures
+        self.succeeded.emit(result)
 
     def _on_progress(self, message: str, current: int, total: int) -> None:
         """Forward pipeline progress to the UI thread."""

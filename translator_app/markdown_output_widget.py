@@ -33,6 +33,7 @@ class MarkdownOutputWidget(QFrame):
 
         self._markdown_text: str = ""
         self._is_preview_mode = False
+        self._markdown_available = True
 
         self._build_ui()
 
@@ -69,15 +70,19 @@ class MarkdownOutputWidget(QFrame):
         self._text_edit.setAcceptRichText(True)
         self._text_edit.setPlaceholderText("Translation result appears here.")
 
-        font = QFont()
-        font.setFamily(_MONOSPACE_FONT_STACK.split(",")[0].strip().strip("'"))
-        font.setPointSize(13)
-        font.setStyleHint(QFont.Monospace)
-        self._text_edit.setFont(font)
+        self._text_edit.setFont(self._create_monospace_font())
 
         layout.addLayout(header_row)
         layout.addWidget(self._text_edit, stretch=1)
         self.setLayout(layout)
+
+    @staticmethod
+    def _create_monospace_font() -> QFont:
+        """Create a monospace font for source display."""
+        font = QFont("monospace")
+        font.setPointSize(13)
+        font.setStyleHint(QFont.Monospace)
+        return font
 
     def set_content(self, markdown_text: str) -> None:
         """Display the given Markdown in source mode."""
@@ -118,21 +123,19 @@ class MarkdownOutputWidget(QFrame):
         self._is_preview_mode = False
         self._text_edit.setPlainText(self._markdown_text)
         self._preview_button.setText("Preview")
-
-        font = QFont()
-        font.setFamily(_MONOSPACE_FONT_STACK.split(",")[0].strip().strip("'"))
-        font.setPointSize(13)
-        font.setStyleHint(QFont.Monospace)
-        self._text_edit.setFont(font)
+        self._text_edit.setFont(self._create_monospace_font())
 
     def _show_preview(self) -> None:
         """Render Markdown as HTML and display in the text edit."""
+        if not self._markdown_available:
+            return
+
         try:
             import markdown as md
 
             html = md.markdown(
                 self._markdown_text,
-                extensions=["tables", "fenced_code", "md_in_html"],
+                extensions=["tables", "fenced_code"],
             )
 
             styled_html = (
@@ -158,7 +161,16 @@ class MarkdownOutputWidget(QFrame):
             self._preview_button.setText("Source")
         except ImportError:
             LOGGER.warning("markdown library not installed; preview unavailable")
+            self._markdown_available = False
+            self._preview_button.setEnabled(False)
+            self._preview_button.setText("Preview (unavailable)")
             self._text_edit.setPlainText(
                 "Preview requires the 'markdown' library.\n"
                 "Install it: pip install markdown>=3.6"
+            )
+        except Exception as exc:
+            LOGGER.error("Markdown rendering failed: %s", exc)
+            self._text_edit.setPlainText(
+                f"Preview rendering failed: {exc}\n\n"
+                f"--- Source ---\n\n{self._markdown_text}"
             )
