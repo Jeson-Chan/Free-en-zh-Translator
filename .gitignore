@@ -25,6 +25,12 @@ env/
 .idea/
 .trae/
 
+# AI tools and docs
+.agents/
+.claude/
+.codegraph/
+docs/
+
 # OS
 .DS_Store
 Thumbs.db
