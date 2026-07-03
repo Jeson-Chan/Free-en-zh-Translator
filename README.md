@@ -1,87 +1,41 @@
-# 学术英文翻译器
-
-一款基于Python和PyQt5构建的桌面浮动翻译工具。该工具专注于中英文学术或专业文本的翻译，并通过兼容OpenAI的聊天补全格式调用DeepSeek API。
-
-## 功能特性
-
-- 集成DeepSeek API，配备学术翻译系统提示词
-- 自动识别中英文语言方向
-- 支持剪贴板粘贴功能
-
-## 快速开始
-
-1. 配置本地**Python环境或虚拟环境**。
-
-   前往Python官方网站：`https://www.python.org/`
-
-   选择**3.12**版本并下载安装。
-
-2. 安装依赖项：
-
-   运行以下指令
-
-```bash
-pip install -r requirements.txt
-```
-
-## 运行程序
-
-```bash
-python main.py
-```
-
-## 翻译模型配置
-
-以Deepseek为例，进入Deepseek开放平台：`https://platform.deepseek.com/usage` 
-
-充值额度，获取 **api key**（sk-xxx...)
-
-**api url**	`https://api.deepseek.com/chat/completions`
-
-选择模型，建议使用最新发布的deepseek v4模型：
-
-**model**
-
-- `deepseek-v4-flash`
-- `deepseek-v4-pro`
-
-如需使用其他兼容模型，可在设置对话框中更改模型参数。
-
-打开**Settings**，将以上参数分别填写到**API Key ，API URL， model**
-
-示例：
-
-> | API Key     | `sk-xxxxxx....`                             |
-> | ----------- | ------------------------------------------- |
-> | **API URL** | `https://api.deepseek.com/chat/completions` |
-> | **model**   | `deepseek-v4-flash`                         |
-
-
-
-
-  
-
 # Academic English Translator
 
-A desktop floating translation tool built with Python and PyQt5. The tool focuses on the translation of Chinese–English academic or professional texts and invokes the DeepSeek API using the OpenAI-compatible chat completion format.
+A desktop floating translation tool built with Python and PyQt5. This tool specializes in translating Chinese and English academic or professional texts, and utilizes the DeepSeek API or Qwen API through an OpenAI-compatible chat completion format.
 
 ## Features
 
-- Integrates the DeepSeek API with a system prompt for academic translation  
-- Automatically detects the language direction between Chinese and English  
-- Supports clipboard paste functionality  
+- Integrated DeepSeek API (due to cost-effectiveness) and Qwen API, equipped with academic translation system prompts
+- Automatic detection of Chinese-English language direction
+- Clipboard paste functionality
+- Image translation, screenshot translation, Markdown source code output, LaTeX formula support
+- Translation result preview
 
 ## Quick Start
 
-1. Configure a **local Python environment or virtual environment**.  
+1. Clone the repository
 
-   Visit the official Python website: `https://www.python.org/`  
+   ```
+   git clone https://github.com/Jeson-Chan/Free-en-zh-Translator.git
+   cd Free-en-zh-Translator
+   ```
 
-   Select version **3.12**, download, and install.
+2. Configure a local **Python environment or virtual environment**.
 
-2. Install dependencies:  
+   Visit the official Python website: `https://www.python.org/`
 
-   Run the following command  
+   Select **version 3.12** and download/install it.
+
+   Create a virtual environment (optional) (recommended)
+
+   ```
+   python -m venv venv
+   venv\Scripts\activate        # Windows
+   source venv/bin/activate   # macOS/Linux
+   ```
+
+3. Install dependencies:
+
+   Run the following command:
 
 ```bash
 pip install -r requirements.txt
@@ -95,29 +49,38 @@ python main.py
 
 ## Translation Model Configuration
 
-Taking DeepSeek as an example, go to the DeepSeek open platform: `https://platform.deepseek.com/usage`  
+Upon first run, a settings dialog will appear, requiring configuration of the DeepSeek API Key and Qwen API Key (other multimodal models are also acceptable). Alternatively, you can create a config.json file in advance (refer to config.example.json) or set the environment variables DEEPSEEK_API_KEY and QWEN_API_KEY.
 
-Top up your balance and obtain an **API key** (sk-xxx...)
+#### Text Translation Model Configuration
+
+Using DeepSeek as an example, navigate to the DeepSeek open platform: `https://platform.deepseek.com/usage`
+
+Recharge credits and obtain the **API key** (sk-xxx...)
 
 **API URL** `https://api.deepseek.com/chat/completions`
 
-Select a model; it is recommended to use the latest DeepSeek v4 models:
+Select a model; it is recommended to use the latest released DeepSeek v4 model:
 
-**model**
+**Model**
 
 - `deepseek-v4-flash`
 - `deepseek-v4-pro`
 
-If you need to use other compatible models, you can change the model parameters in the settings dialog.
+To use other compatible models, modify the model parameters in the settings dialog.
 
-Open **Settings** and fill in the corresponding parameters for **API Key**, **API URL**, and **model**.
+Open **Settings** and fill in the above parameters under **API Key**, **API URL**, and **Model**, respectively.
 
 Example:
 
-> | API Key     | `sk-xxxxxx...`                              |
+> | API Key     | `sk-xxxxxx....`                             |
 > | ----------- | ------------------------------------------- |
 > | **API URL** | `https://api.deepseek.com/chat/completions` |
-> | **model**   | `deepseek-v4-flash`                         |
+> | **Model**   | `deepseek-v4-flash`                         |
 
+#### Multimodal Vision Model Configuration
 
+For multimodal models, the Alibaba Cloud Bailian **qwen3.6** series is recommended, such as qwen3.6-flash. The **API key** can be obtained from the Alibaba Cloud Bailian platform:
 
+`https://bailian.console.aliyun.com/cn-beijing?spm=5176.30260724.0.0.15c732a5CBBIb8&tab=model#/api-key`
+
+The remaining steps are identical to those described above.
