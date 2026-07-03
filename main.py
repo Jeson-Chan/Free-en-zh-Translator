@@ -6,7 +6,13 @@ import logging
 import sys
 from pathlib import Path
 
+from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QApplication, QDialog, QMessageBox
+
+# Enable High-DPI scaling for Qt < 5.14 compatibility.
+# Qt 5.14+ enables high-DPI by default; these attributes are safe no-ops on newer versions.
+QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
+QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
 
 from translator_app.config_manager import ConfigManager
 from translator_app.exceptions import ConfigurationError

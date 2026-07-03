@@ -67,6 +67,7 @@ from translator_app.image_worker import ImageTranslationWorker
 from translator_app.language import describe_language
 from translator_app.markdown_output_widget import MarkdownOutputWidget
 from translator_app.models import AppConfig, HistoryEntry, ImageTranslationResult, TranslationResult
+from translator_app.preview_window import MarkdownPreviewWindow, _WEBENGINE_AVAILABLE
 from translator_app.qwen_client import QwenClient
 from translator_app.settings_dialog import SettingsDialog
 from translator_app.translation_service import TranslationService
@@ -241,6 +242,12 @@ class HistoryCard(QFrame):
         style_pill = QLabel(get_style_display_name(entry.style))
         style_pill.setObjectName("historyPill")
 
+        # Add image type badge if this is an image translation
+        if entry.translation_type == "image":
+            type_pill = QLabel("📷 Image")
+            type_pill.setObjectName("historyTypePill")
+            top_row.addWidget(type_pill)
+
         timestamp_label = QLabel(entry.timestamp)
         timestamp_label.setObjectName("historyMeta")
         timestamp_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
@@ -338,6 +345,15 @@ class HistoryDialog(QDialog):
             }}
             QLabel#historyPill {{
                 background-color: #D4CCC4;
+                border-radius: 15px;
+                color: #5C3D2B;
+                font-family: Georgia, 'Times New Roman', serif;
+                font-size: 12px;
+                font-weight: 600;
+                padding: 5px 12px;
+            }}
+            QLabel#historyTypePill {{
+                background-color: #C9B896;
                 border-radius: 15px;
                 color: #5C3D2B;
                 font-family: Georgia, 'Times New Roman', serif;
@@ -482,6 +498,7 @@ class FloatingTranslatorWindow(QWidget):
         self._current_mode: str = "text"
         self._image_input_widget: Optional[ImageInputWidget] = None
         self._markdown_output_widget: Optional[MarkdownOutputWidget] = None
+        self._text_preview_window: Optional[MarkdownPreviewWindow] = None
 
         self._input_box = QTextEdit()
         self._result_box = ClickToCopyTextEdit()
@@ -798,9 +815,19 @@ class FloatingTranslatorWindow(QWidget):
         self._copy_button.clicked.connect(self._copy_result)
         self._copy_button.setEnabled(False)
 
+        self._text_preview_button = QPushButton("Preview")
+        self._text_preview_button.setObjectName("secondaryButton")
+        self._text_preview_button.clicked.connect(self._preview_text_result)
+        self._text_preview_button.setEnabled(False)
+        if not _WEBENGINE_AVAILABLE:
+            self._text_preview_button.setToolTip(
+                "Install PyQtWebEngine for Markdown preview"
+            )
+
         header_row.addWidget(section_label)
         header_row.addStretch()
         header_row.addWidget(self._copy_button)
+        header_row.addWidget(self._text_preview_button)
 
         self._result_box.setObjectName("resultBox")
         self._result_box.setAcceptRichText(False)
@@ -969,6 +996,22 @@ class FloatingTranslatorWindow(QWidget):
 
         self._markdown_output_widget.set_content(output_text)
 
+        # Save to history when translation succeeded
+        if result.translated_text and not result.error:
+            try:
+                history_entry = HistoryEntry(
+                    timestamp=result.timestamp,
+                    source_text=result.recognized_text,
+                    translated_text=result.translated_text,
+                    source_language=result.source_language,
+                    target_language=result.target_language,
+                    style=DEFAULT_TRANSLATION_STYLE,
+                    translation_type="image",
+                )
+                self._history_manager.add_entry(history_entry)
+            except HistoryError as exc:
+                LOGGER.warning("Failed to save image translation history: %s", exc)
+
     def _handle_image_translation_failure(self, error_message: str) -> None:
         """Show error message for image translation failure."""
         elapsed = self._stop_loading()
@@ -1100,6 +1143,7 @@ class FloatingTranslatorWindow(QWidget):
         self._input_box.setPlainText(translated_text)
         self._result_box.setPlainText(source_text)
         self._copy_button.setEnabled(bool(source_text))
+        self._text_preview_button.setEnabled(bool(source_text))
         self._show_status(
             "Source and result swapped. Translate again for the reverse direction.",
             is_error=False,
@@ -1130,6 +1174,7 @@ class FloatingTranslatorWindow(QWidget):
         elapsed = self._stop_loading()
         self._result_box.setPlainText(result.translated_text)
         self._copy_button.setEnabled(True)
+        self._text_preview_button.setEnabled(True)
         self._animate_result_card()
         source_label = describe_language(result.source_language)
         target_label = describe_language(result.target_language)
@@ -1151,6 +1196,21 @@ class FloatingTranslatorWindow(QWidget):
     def _handle_result_copied(self) -> None:
         """Notify the user when the result text is copied."""
         self._show_status("Translation copied to the clipboard.", is_error=False)
+
+    def _preview_text_result(self) -> None:
+        """Open the Markdown preview window for the text translation result."""
+        result_text = self._result_box.toPlainText().strip()
+        if not result_text:
+            return
+        if not _WEBENGINE_AVAILABLE:
+            MarkdownOutputWidget._show_webengine_warning()
+            return
+        if self._text_preview_window is None:
+            self._text_preview_window = MarkdownPreviewWindow(self)
+        self._text_preview_window.set_content(result_text)
+        self._text_preview_window.show()
+        self._text_preview_window.raise_()
+        self._text_preview_window.activateWindow()
 
     def _show_settings(self) -> None:
         """Open the settings dialog and persist changes."""

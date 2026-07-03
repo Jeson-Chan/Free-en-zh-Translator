@@ -80,6 +80,7 @@ class HistoryEntry:
     source_language: str
     target_language: str
     style: str = DEFAULT_TRANSLATION_STYLE
+    translation_type: str = "text"
 
     @classmethod
     def from_dict(cls, payload: dict[str, Any]) -> "HistoryEntry":
@@ -91,6 +92,7 @@ class HistoryEntry:
             source_language=str(payload["source_language"]),
             target_language=str(payload["target_language"]),
             style=str(payload.get("style", DEFAULT_TRANSLATION_STYLE)),
+            translation_type=str(payload.get("translation_type", "text")),
         )
 
     def to_dict(self) -> dict[str, str]:
@@ -102,6 +104,7 @@ class HistoryEntry:
             "source_language": self.source_language,
             "target_language": self.target_language,
             "style": self.style,
+            "translation_type": self.translation_type,
         }
 
 

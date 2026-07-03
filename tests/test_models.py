@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from translator_app.models import AppConfig, ImageTranslationResult
+from translator_app.models import AppConfig, HistoryEntry, ImageTranslationResult
 
 
 def test_app_config_has_qwen_fields_with_defaults() -> None:
@@ -92,3 +92,43 @@ def test_image_translation_result_supports_partial_failure() -> None:
     assert result.recognized_text == "# Heading"
     assert result.translated_text == ""
     assert result.error == "Translation API timeout"
+
+
+def test_history_entry_defaults_to_text_type() -> None:
+    """HistoryEntry defaults to translation_type='text'."""
+    entry = HistoryEntry(
+        timestamp="2026-01-01T00:00:00",
+        source_text="hello",
+        translated_text="你好",
+        source_language="en",
+        target_language="zh",
+    )
+    assert entry.translation_type == "text"
+
+
+def test_history_entry_from_dict_handles_missing_translation_type() -> None:
+    """Old history entries without translation_type load as 'text'."""
+    payload = {
+        "timestamp": "2026-01-01T00:00:00",
+        "source_text": "hello",
+        "translated_text": "你好",
+        "source_language": "en",
+        "target_language": "zh",
+        "style": "academic",
+    }
+    entry = HistoryEntry.from_dict(payload)
+    assert entry.translation_type == "text"
+
+
+def test_history_entry_to_dict_includes_translation_type() -> None:
+    """to_dict serializes translation_type."""
+    entry = HistoryEntry(
+        timestamp="2026-01-01T00:00:00",
+        source_text="hello",
+        translated_text="你好",
+        source_language="en",
+        target_language="zh",
+        translation_type="image",
+    )
+    data = entry.to_dict()
+    assert data["translation_type"] == "image"

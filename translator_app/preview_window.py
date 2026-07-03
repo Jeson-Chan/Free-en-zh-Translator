@@ -207,6 +207,9 @@ body {
   padding: 28px 32px;
   max-width: 900px;
   margin: 0 auto;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 h1 { font-size: 28px; font-weight: 700; color: #3E2B1F;
      margin-top: 28px; margin-bottom: 14px; border-bottom: 1px solid #D4CCC4;
@@ -265,6 +268,7 @@ def _build_html(rendered_html: str) -> str:
     return (
         "<!DOCTYPE html>"
         "<html lang='en'><head><meta charset='UTF-8'>"
+        "<meta name='viewport' content='width=device-width, initial-scale=1.0'>"
         f"{katex_css_block}"
         f"<style>{_MARKDOWN_THEME_CSS}</style>"
         "</head><body>"
@@ -398,6 +402,18 @@ class MarkdownPreviewWindow(QDialog):
         # Web view
         if _WEBENGINE_AVAILABLE:
             self._web_view = QWebEngineView(self)
+
+            # Configure WebEngine settings for better font rendering
+            from PyQt5.QtWebEngineWidgets import QWebEngineSettings
+            settings = self._web_view.settings()
+            settings.setFontFamily(QWebEngineSettings.StandardFont, "Georgia")
+            settings.setFontFamily(QWebEngineSettings.SerifFont, "Georgia")
+            settings.setFontFamily(QWebEngineSettings.SansSerifFont, "Arial")
+            settings.setFontFamily(QWebEngineSettings.FixedFont, "Consolas")
+            settings.setFontSize(QWebEngineSettings.DefaultFontSize, 16)
+            settings.setFontSize(QWebEngineSettings.DefaultFixedFontSize, 14)
+            settings.setFontSize(QWebEngineSettings.MinimumFontSize, 12)
+
             self._web_view.setUrl(
                 self._web_view.page().url()  # blank page initially
             )
@@ -445,7 +461,12 @@ class MarkdownPreviewWindow(QDialog):
             )
             restored_html = _restore_math(rendered_html, placeholder_map)
             full_html = _build_html(restored_html)
-            self._web_view.setHtml(full_html)
+            # Use setContent for explicit encoding control (better for CJK text)
+            self._web_view.page().setContent(
+                full_html.encode("utf-8"),
+                "text/html; charset=utf-8",
+                self._web_view.url(),
+            )
         except Exception as exc:
             LOGGER.error("Markdown preview rendering failed: %s", exc)
             error_html = (
@@ -457,7 +478,11 @@ class MarkdownPreviewWindow(QDialog):
                 f"<pre>{html.escape(markdown_text)}</pre>"
                 "</body></html>"
             )
-            self._web_view.setHtml(error_html)
+            self._web_view.page().setContent(
+                error_html.encode("utf-8"),
+                "text/html; charset=utf-8",
+                self._web_view.url(),
+            )
 
     def _on_copy_clicked(self) -> None:
         """Copy the Markdown source to clipboard."""
