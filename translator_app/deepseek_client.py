@@ -35,6 +35,7 @@ class DeepSeekClient:
             "model": self._config.model,
             "temperature": self._config.temperature,
             "stream": False,
+            "thinking": {"type": "disabled"},
             "messages": [
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {
@@ -75,6 +76,7 @@ class DeepSeekClient:
             "model": model or self._config.model,
             "temperature": self._config.temperature,
             "stream": False,
+            "thinking": {"type": "disabled"},
             "messages": [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},

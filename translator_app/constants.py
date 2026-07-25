@@ -6,7 +6,7 @@ HISTORY_FILE_NAME = "history.json"
 LOG_FILE_NAME = "translator.log"
 
 DEFAULT_API_URL = "https://api.deepseek.com/chat/completions"
-DEFAULT_MODEL = "deepseek-chat"
+DEFAULT_MODEL = "deepseek-v4-flash"
 DEFAULT_TIMEOUT_SECONDS = 45
 DEFAULT_TEMPERATURE = 0.2
 DEFAULT_HOTKEY = "<ctrl>+t"

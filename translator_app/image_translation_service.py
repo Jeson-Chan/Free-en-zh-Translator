@@ -14,7 +14,7 @@ _TRANSLATION_USER_PROMPT_TEMPLATE = (
     "请将以下学术内容翻译为目标语言，保持 Markdown 格式不变：\n\n{recognized_text}"
 )
 
-_DEFAULT_TRANSLATION_MODEL = "deepseek-chat"
+_DEFAULT_TRANSLATION_MODEL = "deepseek-v4-flash"
 
 
 class ImageTranslationService:
