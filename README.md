@@ -79,7 +79,7 @@ Example:
 
 #### Multimodal Vision Model Configuration
 
-For multimodal models, the Alibaba Cloud Bailian **qwen3.6** series is recommended, such as qwen3.6-flash. The **API key** can be obtained from the Alibaba Cloud Bailian platform:
+For multimodal models, the Alibaba Cloud Bailian **qwen-vl** series is recommended, such as qwen-vl-plus. The **API key** can be obtained from the Alibaba Cloud Bailian platform:
 
 `https://bailian.console.aliyun.com/cn-beijing?spm=5176.30260724.0.0.15c732a5CBBIb8&tab=model#/api-key`
 
