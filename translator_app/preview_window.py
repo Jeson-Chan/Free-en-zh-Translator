@@ -506,19 +506,35 @@ class MarkdownPreviewWindow(QDialog):
             QTimer.singleShot(1500, lambda: self._copied_timer_label.setVisible(False))
 
     def showEvent(self, event) -> None:  # type: ignore[override]
-        """Fade in when shown."""
+        """Render content then fade in after a short delay.
+
+        Rendering happens while the window is still transparent (opacity=0),
+        giving the async QWebEngineView.setContent() time to load before
+        the fade animation reveals the new content.
+        """
+        # Set opacity to 0 before anything is visible
+        if self._fade_effect is not None:
+            self._fade_effect.setOpacity(0.0)
+
+        # Render new content while window is still invisible
+        if self._current_markdown:
+            self._render_markdown(self._current_markdown)
+
+        # Delay fade-in by 150ms to give setContent time to load
+        if self._fade_animation is not None:
+            QTimer.singleShot(150, self._start_fade_in)
+
+        super().showEvent(event)
+
+    def _start_fade_in(self) -> None:
+        """Start the opacity fade-in animation."""
         if self._fade_animation is not None:
             self._fade_animation.stop()
-            self._fade_effect.setOpacity(0.0)
             self._fade_animation.setDuration(180)
             self._fade_animation.setStartValue(0.0)
             self._fade_animation.setEndValue(1.0)
             self._fade_animation.setEasingCurve(QEasingCurve.OutCubic)
             self._fade_animation.start()
-
-        if self._current_markdown:
-            self._render_markdown(self._current_markdown)
-        super().showEvent(event)
 
     def closeEvent(self, event: QCloseEvent) -> None:  # type: ignore[override]
         """Hide instead of destroy so the instance can be reused."""
