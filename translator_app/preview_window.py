@@ -439,10 +439,18 @@ class MarkdownPreviewWindow(QDialog):
         self.setLayout(root_layout)
 
     def set_content(self, markdown_text: str) -> None:
-        """Update content; render immediately if visible."""
+        """Update content; render immediately if visible.
+
+        When the preview window is already open, the old content is
+        cleared first to prevent visual overlap during the async load.
+        """
         self._current_markdown = markdown_text
         self._copy_button.setEnabled(bool(markdown_text))
         if self.isVisible():
+            # Clear old content before re-render so the viewer never sees
+            # the previous result ghosting over the new one.
+            if self._web_view is not None:
+                self._web_view.setHtml("")
             self._render_markdown(markdown_text)
 
     def _render_markdown(self, markdown_text: str) -> None:
