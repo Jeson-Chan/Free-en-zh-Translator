@@ -9,7 +9,7 @@ import os
 import re
 from typing import Optional
 
-from PyQt5.QtCore import QEasingCurve, QPropertyAnimation, Qt
+from PyQt5.QtCore import QEasingCurve, QPropertyAnimation, Qt, QTimer, QUrl
 from PyQt5.QtGui import QColor, QFont, QCloseEvent
 from PyQt5.QtWidgets import (
     QApplication,
@@ -446,9 +446,16 @@ class MarkdownPreviewWindow(QDialog):
             self._render_markdown(markdown_text)
 
     def _render_markdown(self, markdown_text: str) -> None:
-        """Convert Markdown to HTML with math and display in web view."""
+        """Convert Markdown to HTML with math and display in web view.
+
+        Clears the web view first to prevent the previous render from
+        persisting while the new content loads asynchronously.
+        """
         if self._web_view is None:
             return
+
+        # Clear old content immediately to avoid ghosting during async load
+        self._web_view.setHtml("")
 
         try:
             import markdown as md
@@ -461,11 +468,11 @@ class MarkdownPreviewWindow(QDialog):
             )
             restored_html = _restore_math(rendered_html, placeholder_map)
             full_html = _build_html(restored_html)
-            # Use setContent for explicit encoding control (better for CJK text)
+            # Use a fixed blank base URL to avoid cross-content caching
             self._web_view.page().setContent(
                 full_html.encode("utf-8"),
                 "text/html; charset=utf-8",
-                self._web_view.url(),
+                QUrl("about:blank"),
             )
         except Exception as exc:
             LOGGER.error("Markdown preview rendering failed: %s", exc)
@@ -481,7 +488,7 @@ class MarkdownPreviewWindow(QDialog):
             self._web_view.page().setContent(
                 error_html.encode("utf-8"),
                 "text/html; charset=utf-8",
-                self._web_view.url(),
+                QUrl("about:blank"),
             )
 
     def _on_copy_clicked(self) -> None:
