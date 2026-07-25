@@ -1,6 +1,6 @@
 # AGENT.md — Academic Floating Translator
 
-> 本文档为 AI 编码代理（AGENT）生成的项目全面参考手册，涵盖技术栈、架构设计、模块职责、编码规范和扩展指南。所有信息基于 `2026-07-02` 代码库快照。
+> 本文档为 AI 编码代理（AGENT）生成的项目全面参考手册，涵盖技术栈、架构设计、模块职责、编码规范和扩展指南。所有信息基于 `2026-07-25` 代码库快照（v2.2）。
 
 ---
 
@@ -206,8 +206,8 @@ config.json 的 qwen_api_key 字段（非空）
   | `DEFAULT_QWEN_MODEL` | `"qwen-vl-max"` | 默认图片识别模型 |
   | `DEFAULT_IMAGE_MAX_SIZE_MB` | `20` | 图片最大尺寸（MB） |
   | `DEFAULT_SCREENSHOT_HOTKEY` | `"<ctrl>+<shift>+s"` | 截图快捷键 |
-  | `RECOGNITION_SYSTEM_PROMPT` | 中文提示词 | 图片识别系统提示词（Node 1） |
-  | `IMAGE_TRANSLATION_SYSTEM_PROMPT` | 中文提示词 | 图片翻译系统提示词（Node 2） |
+  | `RECOGNITION_SYSTEM_PROMPT` | 中文提示词 | 图片识别系统提示词（Node 1），含标题格式规则（粗体+层级按字号） |
+  | `IMAGE_TRANSLATION_SYSTEM_PROMPT` | 中文提示词 | 图片翻译系统提示词（Node 2），含标题格式强制要求（翻译后保持粗体+层级） |
 
 ### 4.4 `translator_app/exceptions.py` — 异常层次结构
 
@@ -467,8 +467,8 @@ config.json 的 qwen_api_key 字段（非空）
 - **文件**：[`translator_app/image_recognition_service.py`](translator_app/image_recognition_service.py)
 - **职责**：
   - 封装 `QwenClient.recognize_image()` 调用
-  - 使用 `RECOGNITION_SYSTEM_PROMPT` 和固定 user prompt
-  - 返回 Markdown 格式的识别文本
+  - 使用 `RECOGNITION_SYSTEM_PROMPT`（含标题格式规则：粗体 + 按字号分级）和固定 user prompt
+  - 返回 Markdown 格式的识别文本（标题带 `#`/`##`/`###` 层级和 `**` 粗体）
 - **关键方法**：
   | 方法 | 说明 |
   |------|------|
@@ -479,8 +479,8 @@ config.json 的 qwen_api_key 字段（非空）
 - **文件**：[`translator_app/image_translation_service.py`](translator_app/image_translation_service.py)
 - **职责**：
   - 封装 `DeepSeekClient.translate_with_prompts()` 调用
-  - 使用 `IMAGE_TRANSLATION_SYSTEM_PROMPT` 和 `deepseek-v4-pro` 模型
-  - 将识别后的 Markdown 文本翻译为目标语言
+  - 使用 `IMAGE_TRANSLATION_SYSTEM_PROMPT`（含标题格式强制要求：翻译后保持粗体 + 层级）和 `deepseek-v4-pro` 模型
+  - 将识别后的 Markdown 文本翻译为目标语言，强制保持/补全标题格式
 - **关键方法**：
   | 方法 | 说明 |
   |------|------|
@@ -570,7 +570,26 @@ config.json 的 qwen_api_key 字段（非空）
   | `_show_preview()` | 渲染 Markdown 为 HTML 并显示 |
   | `_create_monospace_font()` | 静态方法，创建等宽字体 |
 
+### 4.26 `translator_app/preview_window.py` — Markdown 预览窗口
+
+- **文件**：[`translator_app/preview_window.py`](translator_app/preview_window.py)
+- **职责**：
+  - 使用 QWebEngineView + KaTeX 渲染 Markdown 为富文本预览
+  - 支持数学公式（LaTeX）渲染
+  - 提供复制 Markdown 源码功能
+  - 淡入动画（`showEvent` 中延迟渲染后渐显）
+  - v2.2 修复：渲染前清空 WebView、先渲染再淡入（防止预览残影）
+- **关键方法**：
+  | 方法 | 说明 |
+  |------|------|
+  | `set_content(markdown_text)` | 设置内容，窗口可见时实时更新（渲染前先清空旧 DOM） |
+  | `_render_markdown(markdown_text)` | 将 Markdown 转为 HTML，通过 QWebEngineView 加载（渲染前先清空旧内容） |
+  | `_start_fade_in()` | 启动淡入动画（由 showEvent 延迟 150ms 调用，等待异步渲染完成） |
+  | `showEvent(event)` | 重写：先设 opacity=0 渲染内容，再延迟启动淡入（避免旧内容残影） |
+  | `closeEvent(event)` | 重写：隐藏而非销毁，支持实例复用 |
+
 ---
+
 
 ## 5. 编码规范
 
@@ -616,7 +635,7 @@ Free-en-zh-Translator/
 ├── AGENT.md                   # AI 代理参考手册
 ├── docs/                      # 文档目录
 │   └── superpowers/plans/     # 实现计划
-├── translator_app/            # 主包（24 个模块）
+├── translator_app/            # 主包（25 个模块）
 │   ├── __init__.py
 │   ├── models.py              # 数据模型（AppConfig, HistoryEntry, TranslationResult, ImageTranslationResult）
 │   ├── constants.py           # 全局常量
@@ -637,11 +656,12 @@ Free-en-zh-Translator/
 │   ├── screenshot_tool.py     # 截图工具
 │   ├── image_input_widget.py  # 图片输入控件
 │   ├── markdown_output_widget.py     # Markdown 输出控件
+│   ├── preview_window.py      # Markdown 预览窗口（QWebEngineView + KaTeX）
 │   ├── history_manager.py     # 历史记录持久化
 │   ├── hotkey_manager.py      # 全局热键
 │   ├── settings_dialog.py     # 设置对话框
 │   └── floating_window.py     # 主浮动窗口
-├── tests/                     # pytest 测试集（45 个测试）
+├── tests/                     # pytest 测试集（48 个测试）
 │   ├── test_language.py
 │   ├── test_deepseek_client.py
 │   ├── test_translation_style.py
@@ -750,6 +770,7 @@ python -m pytest tests/ -v
 **设计理由**：
 - **职责分离**：Node 1 专注图像理解（多模态），Node 2 专注文本翻译（高质量 LLM）
 - **模型选择**：Qwen VL 在图像识别上表现优异；DeepSeek v4-pro 在学术翻译上质量更高
+- **标题格式规范**（v2.2）：识别提示词要求所有标题使用 `**粗体**` + `#`/`##`/`###` 层级（按图片内字号），翻译提示词强制保持/补全此格式
 - **错误隔离**：识别失败时返回空结果；翻译失败时保留识别文本（部分成功）
 - **扩展性**：可独立替换任一节点（如换用 GPT-4V 做识别）
 
@@ -782,7 +803,18 @@ python -m pytest tests/ -v
 - `closeEvent` 重写确保外部关闭时发射 `cancelled` 信号
 - `deleteLater()` 清理覆盖层防止内存泄漏
 
+### 7.8 预览窗口防残影策略（v2.2）
+
+`preview_window.py` 的 `MarkdownPreviewWindow` 使用 QWebEngineView 渲染 Markdown + KaTeX。由于 `setContent()` 是异步操作，切换内容时旧 DOM 不会立即被替换，导致新旧内容叠加（"残影"）。
+
+**修复策略（三层防护）**：
+1. **渲染前清空**：`_render_markdown()` 在调用 `setContent()` 前先 `setHtml("")` 清空 WebView，并用固定 `QUrl("about:blank")` 作为基准 URL 避免跨内容缓存
+2. **先渲染再淡入**：`showEvent()` 先设 opacity=0、渲染新内容，再通过 `QTimer.singleShot(150ms)` 延迟启动淡入动画（给 `setContent` 异步加载时间）
+3. **实时更新保护**：`set_content()` 在窗口已可见时，先清空再渲染
+4. **定时器取消**：`_fade_in_timer` 管理淡入定时器，快速显隐时取消旧定时器防止过期渲染
+
 ---
+
 
 ## 8. 扩展指南
 
