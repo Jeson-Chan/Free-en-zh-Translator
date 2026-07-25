@@ -83,7 +83,7 @@ python main.py
 
 #### 多模态视觉模型配置
 
-多模态模型推荐阿里云百炼的**qwen3.6**系列，如qwen3.6-flash，**api key**可进入阿里云百炼平台获取：
+多模态模型推荐阿里云百炼的**qwen-vl**系列，如qwen-vl-plus，**api key**可进入阿里云百炼平台获取：
 
 `https://bailian.console.aliyun.com/cn-beijing?spm=5176.30260724.0.0.15c732a5CBBIb8&tab=model#/api-key`
 
