@@ -318,6 +318,7 @@ class MarkdownPreviewWindow(QDialog):
         # Fade-in animation
         self._fade_effect = None
         self._fade_animation = None
+        self._fade_in_timer: Optional[QTimer] = None
 
         self._apply_stylesheet()
         self._build_ui()
@@ -509,8 +510,6 @@ class MarkdownPreviewWindow(QDialog):
             self._copied_timer_label.setVisible(True)
             self._copied_timer_label.show()
             # Hide after 1.5s
-            from PyQt5.QtCore import QTimer
-
             QTimer.singleShot(1500, lambda: self._copied_timer_label.setVisible(False))
 
     def showEvent(self, event) -> None:  # type: ignore[override]
@@ -528,9 +527,13 @@ class MarkdownPreviewWindow(QDialog):
         if self._current_markdown:
             self._render_markdown(self._current_markdown)
 
-        # Delay fade-in by 150ms to give setContent time to load
-        if self._fade_animation is not None:
-            QTimer.singleShot(150, self._start_fade_in)
+        # Delay fade-in by 150ms, cancel any pending from a previous cycle
+        if self._fade_in_timer is not None:
+            self._fade_in_timer.stop()
+        self._fade_in_timer = QTimer(self)
+        self._fade_in_timer.setSingleShot(True)
+        self._fade_in_timer.timeout.connect(self._start_fade_in)
+        self._fade_in_timer.start(150)
 
         super().showEvent(event)
 
