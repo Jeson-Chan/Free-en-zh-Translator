@@ -11,7 +11,7 @@ def test_app_config_has_qwen_fields_with_defaults() -> None:
 
     assert config.qwen_api_key == ""
     assert config.qwen_api_url == "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
-    assert config.qwen_model == "qwen-vl-max"
+    assert config.qwen_model == "qwen-vl-plus"
     assert config.image_max_size_mb == 20
     assert config.screenshot_hotkey == "<ctrl>+<shift>+s"
 
@@ -40,7 +40,7 @@ def test_app_config_from_dict_uses_defaults_for_missing_qwen_fields() -> None:
     config = AppConfig.from_dict({})
 
     assert config.qwen_api_key == ""
-    assert config.qwen_model == "qwen-vl-max"
+    assert config.qwen_model == "qwen-vl-plus"
 
 
 def test_app_config_to_dict_includes_qwen_fields() -> None:

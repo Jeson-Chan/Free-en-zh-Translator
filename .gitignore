@@ -29,6 +29,7 @@ env/
 .agents/
 .claude/
 .codegraph/
+.superpowers/
 docs/
 skills-lock.json
 
